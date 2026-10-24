@@ -18,10 +18,11 @@ const PREPOPULATED_PROMPTS = [
 
 export default function ChatAssistant() {
   const [isOpen, setIsOpen] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Hello! I am the MoSPI Project Intelligence Assistant. How can I help you today?",
+      content: "Hello! I am the MoSPI Project Intelligence Assistant, powered by Agent 37. How can I assist you with infrastructure analytics today?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -49,7 +50,7 @@ export default function ChatAssistant() {
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage }),
+        body: JSON.stringify({ message: userMessage, sessionId }),
         signal: AbortSignal.timeout(30000),
       });
 
@@ -59,6 +60,9 @@ export default function ChatAssistant() {
       }
 
       const data = await response.json();
+      if (data.sessionId) {
+        setSessionId(data.sessionId);
+      }
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: data.response },
@@ -91,7 +95,7 @@ export default function ChatAssistant() {
           aria-label="Open Project Intelligence Assistant"
         >
           <Bot className="w-6 h-6 animate-pulse" />
-          <span className="hidden sm:inline font-bold text-xs uppercase tracking-wider pr-1">MoSPI AI</span>
+          <span className="hidden sm:inline font-bold text-xs uppercase tracking-wider pr-1">Agent 37</span>
         </button>
       )}
 
@@ -117,9 +121,9 @@ export default function ChatAssistant() {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-base tracking-tight text-white">MoSPI Intelligence Assistant</h3>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Gemini AI
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                    Agent 37
                   </span>
                 </div>
                 <p className="text-xs text-slate-300">Natural language portfolio analytics & query resolution</p>
