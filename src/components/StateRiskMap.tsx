@@ -5,7 +5,6 @@ import { scaleLinear } from "d3-scale";
 import { createClient } from "@supabase/supabase-js";
 import { geoMercator, geoIdentity, geoPath, type GeoPermissibleObjects } from "d3-geo";
 import type { FeatureCollection, Feature, Geometry } from "geojson";
-import { BRICS_STATES } from "@/lib/constants";
 
 const colorScale = scaleLinear<string>()
   .domain([0, 50, 100])
@@ -169,33 +168,14 @@ export default function StateRiskMap({ projects, selectedState, country = "India
   const getRiskScore = useCallback(
     (stateName: string, d?: string) => {
       const sn = stateName.toLowerCase();
-      let matched: any[] = [];
-      if (country === "All") {
-          if (!["India", "Brazil", "Russia", "China", "South Africa"].includes(stateName)) {
-              return { risk: -1, count: 0 };
-          }
-          matched = data.filter(p => {
-              let pCountry = 'India';
-              if (p.state) {
-                  for (const [c, bricsStates] of Object.entries(BRICS_STATES)) {
-                      if (bricsStates.some((bs: string) => p.state.includes(bs) || bs.includes(p.state))) {
-                          pCountry = c;
-                          break;
-                      }
-                  }
-              }
-              return pCountry === stateName;
-          });
-      } else {
-          const aliases = REGION_MAPPING[sn] || [];
-          matched = data.filter(
-            (p) =>
-              p.state &&
-              (p.state.toLowerCase().includes(sn) ||
-                sn.includes(p.state.toLowerCase()) ||
-                aliases.some(a => p.state.toLowerCase().includes(a) || a.includes(p.state.toLowerCase())))
-          );
-      }
+      const aliases = REGION_MAPPING[sn] || [];
+      const matched = data.filter(
+        (p) =>
+          p.state &&
+          (p.state.toLowerCase().includes(sn) ||
+            sn.includes(p.state.toLowerCase()) ||
+            aliases.some(a => p.state.toLowerCase().includes(a) || a.includes(p.state.toLowerCase())))
+      );
 
       if (matched.length === 0) {
         return { risk: -1, count: 0 };

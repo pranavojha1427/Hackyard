@@ -72,40 +72,9 @@ const ALL_MINISTRIES = [
 ];
 
 
-const BRICS_STATES = {
-    "Brazil": [
-        "São Paulo", "Rio de Janeiro", "Minas Gerais", "Bahia", "Paraná", 
-        "Rio Grande do Sul", "Pernambuco", "Ceará", "Pará", "Santa Catarina", 
-        "Maranhão", "Goiás", "Amazonas", "Espírito Santo", "Paraíba", 
-        "Rio Grande do Norte", "Mato Grosso", "Alagoas", "Piauí", 
-        "Distrito Federal", "Mato Grosso do Sul", "Sergipe", "Rondônia", 
-        "Tocantins", "Acre", "Amapá", "Roraima", "SAo Paulo", "ParanA"
-    ],
-    "Russia": [
-        "Moscow", "Moskva", "Saint Petersburg", "City of St. Petersburg", "Novosibirsk", 
-        "Yekaterinburg", "Sverdlovsk", "Kazan", "Tatarstan", "Nizhny Novgorod", 
-        "Chelyabinsk", "Omsk", "Samara", "Rostov-on-Don", "Ufa", "Krasnoyarsk", 
-        "Perm", "Voronezh", "Volgograd", "Krasnodar", "Saratov", "Tyumen", 
-        "Tolyatti", "Izhevsk", "Barnaul", "Ulyanovsk", "Irkutsk", "Khabarovsk", 
-        "Yaroslavl", "Vladivostok"
-    ],
-    "China": [
-        "Guangdong", "Jiangsu", "Shandong", "Zhejiang", "Henan", "Sichuan", 
-        "Hubei", "Fujian", "Hunan", "Shanghai", "Anhui", "Hebei", "Beijing", 
-        "Shaanxi", "Jiangxi", "Chongqing", "Liaoning", "Guangxi", "Yunnan", 
-        "Inner Mongolia", "Shanxi", "Guizhou", "Heilongjiang", "Xinjiang", 
-        "Tianjin", "Jilin", "Gansu", "Hainan", "Ningxia", "Qinghai", "Tibet"
-    ],
-    "South Africa": [
-        "Gauteng", "KwaZulu-Natal", "Western Cape", "Eastern Cape", "Limpopo", 
-        "Mpumalanga", "North West", "Free State", "Northern Cape"
-    ],
-};
-
 export function DashboardClientView({ allProjects, agencyData, benchResData, alertsData, kpi, currentUser }: Props) {
   const [language, setLanguage] = useState<string>("en");
   const t = I18N[language] || I18N.en;
-  const [countryFilter, setCountryFilter] = useState<string>(currentUser?.country || "India");
   const [stateFilter, setStateFilter] = useState<string | null>(null);
   const [sectorFilter, setSectorFilter] = useState<string | null>(null);
   const [ministryFilter, setMinistryFilter] = useState<string | null>(null);
@@ -154,41 +123,21 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
   const uniqueStates = useMemo(() => {
     const states = new Set<string>();
     projectsWithMinistry.forEach(p => {
-      let pCountry = 'India';
       if (p.state) {
-          for (const [c, bricsStates] of Object.entries(BRICS_STATES)) {
-              if (bricsStates.some((bs: string) => p.state.includes(bs) || bs.includes(p.state))) {
-                  pCountry = c;
-                  break;
-              }
+        p.state.split(',').forEach((s: string) => {
+          const trimmed = s.trim();
+          if (trimmed && trimmed !== 'Multi State' && trimmed !== 'Centre') {
+            states.add(trimmed);
           }
-      }
-      if (countryFilter === 'All' || pCountry === countryFilter) {
-          if (p.state) {
-            p.state.split(',').forEach((s: string) => states.add(s.trim()));
-          }
+        });
       }
     });
     return Array.from(states).sort();
-  }, [projectsWithMinistry, countryFilter]);
+  }, [projectsWithMinistry]);
 
   const filteredProjects = useMemo(() => {
     let result = projectsWithMinistry;
 
-    // Multi-tenant / BRICS filtering logic
-    result = result.filter(p => {
-        let pCountry = 'India';
-        if (p.state) {
-            for (const [c, bricsStates] of Object.entries(BRICS_STATES)) {
-                if (bricsStates.some((bs: string) => p.state.includes(bs) || bs.includes(p.state))) {
-                    pCountry = c;
-                    break;
-                }
-            }
-        }
-        if (countryFilter === 'All') return true;
-        return pCountry === countryFilter;
-    });
     if (stateFilter) {
       const sn = stateFilter.toLowerCase();
       result = result.filter(p => p.state && p.state.toLowerCase().includes(sn));
@@ -200,10 +149,10 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
       result = result.filter(p => p.ministry === ministryFilter);
     }
     return result;
-  }, [projectsWithMinistry, stateFilter, sectorFilter, ministryFilter, countryFilter]);
+  }, [projectsWithMinistry, stateFilter, sectorFilter, ministryFilter]);
 
   // KPIs bypass if no filters are active to use precomputed values
-  const isFiltered = stateFilter || sectorFilter || ministryFilter || countryFilter !== 'India' || (currentUser && currentUser.role !== "admin" && currentUser.role !== "user");
+  const isFiltered = Boolean(stateFilter || sectorFilter || ministryFilter || (currentUser && currentUser.role !== "admin" && currentUser.role !== "user"));
   const summary = useMemo(() => {
     return {
       totalProjects: filteredProjects.length,
@@ -433,27 +382,16 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
         <div className="space-y-8">
           
           {/* Filters Row */}
-          <div className="flex flex-wrap gap-4 p-4 bg-white border border-slate-200 rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
+            <div className="flex flex-wrap gap-4 p-4 bg-white border border-slate-200 rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
               <div className="flex flex-col gap-1 w-full md:w-auto flex-1 min-w-[200px]">
-                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Country (BRICS)</label>
+                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">State / UT (India)</label>
                 <select 
-                  className="bg-slate-50 border border-slate-300 text-slate-700 p-2 text-sm font-mono focus:border-emerald-500 outline-none disabled:opacity-50"
-                  value={countryFilter}
-                  onChange={(e) => { setCountryFilter(e.target.value); setStateFilter(null); }}
-                  disabled={!!currentUser?.country} 
+                  className="bg-slate-50 border border-slate-300 text-slate-700 p-2 text-sm font-mono focus:border-emerald-500 outline-none"
+                  value={stateFilter || ""}
+                  onChange={(e) => setStateFilter(e.target.value || null)}
                 >
-                  {(!currentUser?.country || (currentUser?.role === "admin" && !currentUser?.country)) && <option value="All">All BRICS (Global)</option>}
-                  {currentUser?.country ? (
-                    <option value={currentUser.country}>{currentUser.country}</option>
-                  ) : (
-                    <>
-                      <option value="India">India</option>
-                      <option value="Brazil">Brazil</option>
-                      <option value="Russia">Russia</option>
-                      <option value="China">China</option>
-                      <option value="South Africa">South Africa</option>
-                    </>
-                  )}
+                  <option value="">All States / UTs (India)</option>
+                  {uniqueStates.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
 
@@ -481,10 +419,10 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
               </select>
             </div>
 )}
-            {(sectorFilter || ministryFilter) && (
+            {(stateFilter || sectorFilter || ministryFilter) && (
               <div className="flex items-end">
                 <button 
-                  onClick={() => { setSectorFilter(null); setMinistryFilter(null); }}
+                  onClick={() => { setStateFilter(null); setSectorFilter(null); setMinistryFilter(null); }}
                   className="bg-slate-200 hover:bg-slate-300 text-slate-700 p-2 text-sm font-mono h-[38px] px-4 transition-colors"
                 >
                   Clear Filters
@@ -539,7 +477,7 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
               </CardHeader>
               <CardContent className="pt-6 flex-1 flex flex-col">
                 <Suspense fallback={<div className="h-[300px] md:h-[400px] flex items-center justify-center text-slate-500 font-mono">Loading Map...</div>}>
-                  <StateRiskMap country={countryFilter} projects={allProjects} selectedState={stateFilter || undefined} onStateSelect={(s) => setStateFilter(s === stateFilter ? null : s)} />
+                  <StateRiskMap country="India" projects={allProjects} selectedState={stateFilter || undefined} onStateSelect={(s) => setStateFilter(s === stateFilter ? null : s)} />
                 </Suspense>
               </CardContent>
             </Card>

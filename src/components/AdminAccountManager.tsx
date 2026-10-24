@@ -27,26 +27,21 @@ const MINISTRIES = [
 ];
 
 export function AdminAccountManager({ currentUser }: { currentUser?: any }) {
-  const isBricsAdmin = currentUser?.role === "admin" && !currentUser?.country;
-  const isCountryAdmin = currentUser?.role === "admin" && !!currentUser?.country;
   const isStateAdmin = currentUser?.role === "state_admin";
+  const defaultRole = "Ministry";
+  const availableRoles = ["State Admin", "Ministry", "Agency", "Engineer"];
 
-  const defaultRole = isBricsAdmin ? "Country Admin" : isCountryAdmin ? "State Admin" : "Ministry";
-  const availableRoles = isBricsAdmin ? ["Country Admin", "State Admin", "Ministry", "Agency"] : isCountryAdmin ? ["State Admin", "Ministry", "Agency"] : ["Ministry"];
-
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: defaultRole, ministry: "", agency: "", state: "", country: "" });
-  const activeCountry = currentUser?.country || form.country || "India";
-  const STATES = BRICS_STATES[activeCountry] || BRICS_STATES["India"];
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: defaultRole, ministry: "", agency: "", state: "", country: "India" });
+  const STATES = BRICS_STATES["India"];
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault(); setLoading(true); setMessage("");
     
-    // Inject the state admin's state into the ministry account
-    const payload = { ...form, country: isCountryAdmin ? currentUser.country : form.country };
+    const payload = { ...form, country: "India" };
     if (isStateAdmin && payload.role === "Ministry") {
-        payload.state = currentUser.state; // State admin assigns ministry to their own state
+        payload.state = currentUser.state;
     }
 
     try {
@@ -54,14 +49,14 @@ export function AdminAccountManager({ currentUser }: { currentUser?: any }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Unable to create account.");
       setMessage(`Account created for ${form.email}.`);
-      setForm({ name: "", email: "", password: "", role: defaultRole, ministry: "", agency: "", state: "", country: "" });
+      setForm({ name: "", email: "", password: "", role: defaultRole, ministry: "", agency: "", state: "", country: "India" });
     } catch (e: any) { setMessage(e.message); }
     finally { setLoading(false); }
   }
 
   return (
     <div className="bg-white border-2 border-slate-200 p-6 max-w-4xl">
-      <h2 className="font-black text-xl uppercase">{isBricsAdmin ? "Global Admin Platform Provisioning" : isCountryAdmin ? "Country Admin Platform Provisioning" : "State Admin Ministry Provisioning"}</h2>
+      <h2 className="font-black text-xl uppercase">Platform User Provisioning</h2>
       <p className="text-xs font-mono text-slate-500 mt-1 mb-6">ADMIN ONLY A PRIVILEGED ROLES ARE PROVISIONED HERE</p>
       
       {message && <div className="mb-4 p-3 bg-emerald-50 text-emerald-700 text-sm font-semibold rounded">{message}</div>}
@@ -92,14 +87,6 @@ export function AdminAccountManager({ currentUser }: { currentUser?: any }) {
           </label>
         )}
 
-        {isBricsAdmin && (
-          <label className="text-xs font-mono uppercase text-slate-600">Country Assignment
-            <select required className="mt-1 w-full border border-slate-300 p-2 text-sm font-sans bg-white outline-none focus:border-indigo-500" value={form.country} onChange={e => setForm({...form, country:e.target.value, state:""})}>
-              <option value="" disabled>Select Country</option>
-              {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </label>
-        )}
 
         {form.role === "Ministry" && (
           <label className="text-xs font-mono uppercase text-slate-600">Ministry / Department

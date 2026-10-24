@@ -5,24 +5,37 @@ if (!uri) throw new Error("Missing MONGODB_URI environment variable");
 
 const options = { serverSelectionTimeoutMS: 3000, connectTimeoutMS: 3000 };
 
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
 
 declare global {
   // eslint-disable-next-line no-var
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
-if (process.env.NODE_ENV === "development") {
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, options);
-    global._mongoClientPromise = client.connect();
+let _cachedPromise: Promise<MongoClient> | null = null;
+
+export async function getMongoClient(): Promise<MongoClient> {
+  if (process.env.NODE_ENV === "development") {
+    if (!global._mongoClientPromise) {
+      const client = new MongoClient(uri, options);
+      global._mongoClientPromise = client.connect();
+    }
+    return global._mongoClientPromise;
   }
-  clientPromise = global._mongoClientPromise;
-} else {
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+  if (!_cachedPromise) {
+    const client = new MongoClient(uri, options);
+    _cachedPromise = client.connect();
+  }
+  return _cachedPromise;
 }
+
+const clientPromise = {
+  then(onfulfilled?: any, onrejected?: any) {
+    return getMongoClient().then(onfulfilled, onrejected);
+  },
+  catch(onrejected?: any) {
+    return getMongoClient().catch(onrejected);
+  }
+} as unknown as Promise<MongoClient>;
 
 export default clientPromise;
 
