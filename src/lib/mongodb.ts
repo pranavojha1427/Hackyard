@@ -3,7 +3,7 @@ import { MongoClient } from "mongodb";
 const uri = process.env.MONGODB_URI || "";
 if (!uri) throw new Error("Missing MONGODB_URI environment variable");
 
-const options = { serverSelectionTimeoutMS: 800, connectTimeoutMS: 800 };
+const options = { serverSelectionTimeoutMS: 5000, connectTimeoutMS: 5000 };
 
 
 declare global {
