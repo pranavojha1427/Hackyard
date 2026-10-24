@@ -23,6 +23,7 @@ let cachedBenchmarks: CacheEntry<any[]> | null = null;
 let cachedAlerts: CacheEntry<any[]> | null = null;
 let cachedPortfolioKpi: CacheEntry<any> | null = null;
 let cachedMongoProjects: CacheEntry<any[]> | null = null;
+let cachedOverrides: CacheEntry<any[]> | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const SHORT_CACHE_TTL_MS = 60 * 1000; // 1 minute
 
@@ -51,6 +52,7 @@ export default async function DashboardPage() {
   let benchData: any[] = [];
   let alertsData: any[] = [];
   let mongoAgencyProjects: any[] = [];
+  let overridesData: any[] = [];
   let kpi: any = null;
 
   try {

@@ -17,6 +17,7 @@ import InvestmentParity from "./InvestmentParity";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionUser } from "@/lib/auth";
 import { I18N } from "@/lib/i18n";
+import { extractAgency, FALLBACK_AGENCY_RANKINGS } from "@/lib/agency-extractor";
 import { 
   Layers, 
   Landmark, 
@@ -259,7 +260,7 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
     // Compute agencies dynamically for the active state/filters from filteredProjects
     filteredProjects.forEach(p => {
       const ag = p.agency || extractAgency(p.project_name, p.sector, p.agency);
-      if (!ag || ag === "Unknown Agency" || ag === "State Infrastructure Agency") return;
+      if (!ag || ag === "Unknown Agency") return;
       if (!agencyMap.has(ag)) {
         agencyMap.set(ag, { agency: ag, total_projects: 0, delayed_project_count: 0, sum_cost_overrun: 0 });
       }

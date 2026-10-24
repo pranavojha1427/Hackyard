@@ -25,7 +25,7 @@ export async function getMongoProjects(agency?: string) {
   return db.collection(PROJECTS_COLLECTION).find(agency ? { agency } : {}).sort({ updatedAt: -1 }).toArray();
 }
 
-export async function getProjectOverrides(projectIds: Array<string | number>) {
+export async function getProjectOverrides(projectIds: Array<string | number> = []) {
   if (!projectIds.length) return [];
   const client = await clientPromise;
   const db = client.db(DB_NAME);

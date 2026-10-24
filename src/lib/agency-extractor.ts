@@ -56,9 +56,35 @@ export function extractAgency(name?: string, sector?: string, existingAgency?: s
     }
   }
 
+  // Specific domain inferences from title
+  const nl = n.toLowerCase();
+  const sec = (sector || "").toLowerCase();
+  if (nl.includes("zojila") || nl.includes("z-morh") || nl.includes("sardp") || nl.includes("nhidcl")) return "National Highways & Infrastructure Development Corp [NHIDCL]";
+  if (nl.includes("iwai") || sec.includes("inland waterways") || nl.includes("waterway") || nl.includes("national waterway")) return "Inland Waterways Authority of India [IWAI]";
+  if (nl.includes("baghjan") || nl.includes("nadua") || nl.includes("khagorija") || nl.includes("oil india")) return "Oil India Limited [OIL]";
+  if (nl.includes("kandla lpg") || nl.includes("panipat") || nl.includes("paradip") || nl.includes("iocl")) return "Indian Oil Corporation Limited [IOCL]";
+  if (nl.includes("mumbai refinery") || nl.includes("captive consumption at mr") || nl.includes("hpcl")) return "Hindustan Petroleum Corporation Limited [HPCL]";
+  if (nl.includes("teesta") || nl.includes("nhpc")) return "NHPC Limited";
+  if (nl.includes("raghunathpur") || nl.includes("dvc") || nl.includes("damodar valley")) return "Damodar Valley Corporation [DVC]";
+  if (nl.includes("nit, delhi") || nl.includes("iim amritsar") || nl.includes("hostel") || nl.includes("academic block") || nl.includes("cpwd")) return "Central Public Works Department [CPWD]";
+  if (nl.includes("clean ganga") || nl.includes("nmcg")) return "National Mission for Clean Ganga [NMCG]";
+
   // Canonicalize common agency acronyms and variants
   if (ag) {
     const l = ag.toLowerCase();
+    if (l.includes("ecl - cil")) return "Eastern Coalfields Limited [ECL]";
+    if (l.includes("bccl - cil")) return "Bharat Coking Coal Limited [BCCL]";
+    if (l.includes("ccl - cil")) return "Central Coalfields Limited [CCL]";
+    if (l.includes("wcl - cil")) return "Western Coalfields Limited [WCL]";
+    if (l.includes("secl - cil")) return "South Eastern Coalfields Limited [SECL]";
+    if (l.includes("mcl - cil")) return "Mahanadi Coalfields Limited [MCL]";
+    if (l.includes("ncl - cil")) return "Northern Coalfields Limited [NCL]";
+    if (l.includes("rvnl - i") || l.includes("rvnl - ii") || l.includes("rvnl")) return "Rail Vikas Nigam Limited [RVNL]";
+    if (l.includes("ministryofpetroleumnaturalgas") || l.includes("ministry of petroleum")) return "Ministry of Petroleum & Natural Gas";
+    if (l.includes("ministry of coal") || l.includes("mis mocoal")) return "Ministry of Coal";
+    if (l.includes("clean ganga") || l.includes("nmcg")) return "National Mission for Clean Ganga [NMCG]";
+    if (l.includes("damodar valley") || l.includes("[dvc]")) return "Damodar Valley Corporation [DVC]";
+
     if (l.includes("national highways authority") || l === "nhai" || l.includes("[nhai]")) return "National Highways Authority of India [NHAI]";
     if (l.includes("nhidcl")) return "National Highways & Infrastructure Development Corp [NHIDCL]";
     if (l.includes("morth") || l.includes("road transport & highways")) return "Ministry of Road Transport & Highways [MoRTH]";
@@ -107,47 +133,37 @@ export function extractAgency(name?: string, sector?: string, existingAgency?: s
   }
 
   // Keyword inferences from title
-  const nl = n.toLowerCase();
-  if (nl.includes("nhai") || nl.includes("national highway")) return "National Highways Authority of India [NHAI]";
-  if (nl.includes("nhidcl")) return "National Highways & Infrastructure Development Corp [NHIDCL]";
-  if (nl.includes("morth")) return "Ministry of Road Transport & Highways [MoRTH]";
-  if (nl.includes("airport") || nl.includes("aai")) return "Airports Authority of India [AAI]";
+  if (nl.includes("nhai") || nl.includes("national highway") || nl.includes("greenfield") || nl.includes("expressway") || nl.includes("access controlled") || nl.includes("4l") || nl.includes("6l") || nl.includes("four lane") || nl.includes("six lane") || nl.includes("flyover") || nl.includes("nh-")) return "National Highways Authority of India [NHAI]";
+  if (nl.includes("morth") || sec.includes("road") || sec.includes("highway") || nl.includes("widening") || nl.includes("paved shoulder") || nl.includes("rehabilitation") || nl.includes("up-gradation")) return "Ministry of Road Transport & Highways [MoRTH]";
+  if (nl.includes("airport") || nl.includes("aai") || nl.includes("taxi track") || nl.includes("apron") || nl.includes("ntb complex") || nl.includes("atm automation")) return "Airports Authority of India [AAI]";
   if (nl.includes("powergrid") || nl.includes("transmission")) return "Power Grid Corporation of India [POWERGRID]";
   if (nl.includes("ntpc")) return "NTPC Limited";
   if (nl.includes("coal") || nl.includes("mine")) return "Coal India Limited [CIL]";
   if (nl.includes("metro")) return "Metro Rail Corporation";
-  if (nl.includes("railway") || nl.includes("rail")) return "Indian Railways";
-  if (nl.includes("water") || nl.includes("dam") || nl.includes("barrage")) return "Central Water Commission [CWC]";
+  if (nl.includes("railway") || nl.includes("rail") || sec.includes("rail")) return "Indian Railways";
+  if (nl.includes("water") || nl.includes("dam") || nl.includes("barrage") || sec.includes("water")) return "Central Water Commission [CWC]";
   if (nl.includes("hospital") || nl.includes("aiims")) return "AIIMS / Health Ministry";
-  if (nl.includes("iit") || nl.includes("nit") || nl.includes("university")) return "Ministry of Education";
-  if (nl.includes("petroleum") || nl.includes("refinery") || nl.includes("pipeline")) return "Oil and Natural Gas Corporation [ONGC]";
-
-  const s = (sector || "").toLowerCase();
-  if (s.includes("aviation") || s.includes("airport")) return "Airports Authority of India [AAI]";
-  if (s.includes("road") || s.includes("highway")) return "National Highways Authority of India [NHAI]";
-  if (s.includes("rail")) return "Indian Railways";
-  if (s.includes("power") || s.includes("generation")) return "NTPC Limited";
-  if (s.includes("transmission") || s.includes("grid")) return "Power Grid Corporation of India [POWERGRID]";
-  if (s.includes("petroleum") || s.includes("oil") || s.includes("gas")) return "Oil and Natural Gas Corporation [ONGC]";
-  if (s.includes("coal")) return "Coal India Limited [CIL]";
-  if (s.includes("urban") || s.includes("metro")) return "Metro Rail Corporation";
-  if (s.includes("water") || s.includes("irrigation")) return "Central Water Commission [CWC]";
+  if (nl.includes("iit") || nl.includes("nit") || nl.includes("university") || sec.includes("education")) return "Ministry of Education";
+  if (nl.includes("petroleum") || nl.includes("refinery") || nl.includes("pipeline") || sec.includes("oil") || sec.includes("gas")) return "Oil and Natural Gas Corporation [ONGC]";
 
   return "State Infrastructure Agency";
 }
 
 export const FALLBACK_AGENCY_RANKINGS = [
-  { agency: "National Highways Authority of India [NHAI]", total_projects: 488, delayed_project_count: 128, delay_frequency_pct: 26.2, avg_cost_overrun_pct: 14.5 },
-  { agency: "Ministry of Road Transport & Highways [MoRTH]", total_projects: 349, delayed_project_count: 85, delay_frequency_pct: 24.3, avg_cost_overrun_pct: 11.2 },
-  { agency: "National Highways & Infrastructure Development Corp [NHIDCL]", total_projects: 173, delayed_project_count: 55, delay_frequency_pct: 31.8, avg_cost_overrun_pct: 18.2 },
-  { agency: "Central Railway", total_projects: 68, delayed_project_count: 24, delay_frequency_pct: 35.3, avg_cost_overrun_pct: 19.4 },
-  { agency: "Power Grid Corporation of India [POWERGRID]", total_projects: 67, delayed_project_count: 5, delay_frequency_pct: 7.5, avg_cost_overrun_pct: 4.8 },
-  { agency: "Western Railway", total_projects: 44, delayed_project_count: 15, delay_frequency_pct: 34.1, avg_cost_overrun_pct: 16.7 },
-  { agency: "Oil and Natural Gas Corporation [ONGC]", total_projects: 38, delayed_project_count: 6, delay_frequency_pct: 15.8, avg_cost_overrun_pct: 8.9 },
-  { agency: "Western Coalfields Limited [WCL]", total_projects: 32, delayed_project_count: 9, delay_frequency_pct: 28.1, avg_cost_overrun_pct: 12.3 },
-  { agency: "Airports Authority of India [AAI]", total_projects: 26, delayed_project_count: 5, delay_frequency_pct: 19.2, avg_cost_overrun_pct: 9.6 },
-  { agency: "Eastern Coalfields Limited [ECL]", total_projects: 25, delayed_project_count: 7, delay_frequency_pct: 28.0, avg_cost_overrun_pct: 14.2 },
-  { agency: "East Coast Railway", total_projects: 20, delayed_project_count: 8, delay_frequency_pct: 40.0, avg_cost_overrun_pct: 21.5 },
-  { agency: "Eastern Railway", total_projects: 14, delayed_project_count: 5, delay_frequency_pct: 35.7, avg_cost_overrun_pct: 18.0 },
+  { agency: "National Highways Authority of India [NHAI]", total_projects: 585, delayed_project_count: 136, delay_frequency_pct: 23.2, avg_cost_overrun_pct: 0.8 },
+  { agency: "Ministry of Road Transport & Highways [MoRTH]", total_projects: 359, delayed_project_count: 21, delay_frequency_pct: 5.8, avg_cost_overrun_pct: 1.2 },
+  { agency: "National Highways & Infrastructure Development Corp [NHIDCL]", total_projects: 179, delayed_project_count: 11, delay_frequency_pct: 6.1, avg_cost_overrun_pct: 2.7 },
+  { agency: "Central Railway", total_projects: 68, delayed_project_count: 26, delay_frequency_pct: 38.2, avg_cost_overrun_pct: 46.8 },
+  { agency: "Power Grid Corporation of India [POWERGRID]", total_projects: 67, delayed_project_count: 2, delay_frequency_pct: 3.0, avg_cost_overrun_pct: 1.9 },
+  { agency: "Western Railway", total_projects: 44, delayed_project_count: 10, delay_frequency_pct: 22.7, avg_cost_overrun_pct: 33.0 },
+  { agency: "Oil and Natural Gas Corporation [ONGC]", total_projects: 43, delayed_project_count: 7, delay_frequency_pct: 16.3, avg_cost_overrun_pct: 9.8 },
+  { agency: "Western Coalfields Limited [WCL]", total_projects: 32, delayed_project_count: 0, delay_frequency_pct: 0.0, avg_cost_overrun_pct: 0.0 },
+  { agency: "Eastern Coalfields Limited [ECL]", total_projects: 31, delayed_project_count: 0, delay_frequency_pct: 0.0, avg_cost_overrun_pct: 0.0 },
+  { agency: "Airports Authority of India [AAI]", total_projects: 27, delayed_project_count: 4, delay_frequency_pct: 14.8, avg_cost_overrun_pct: 5.3 },
+  { agency: "Ministry of Coal", total_projects: 21, delayed_project_count: 0, delay_frequency_pct: 0.0, avg_cost_overrun_pct: 0.0 },
+  { agency: "Ministry of Petroleum & Natural Gas", total_projects: 21, delayed_project_count: 3, delay_frequency_pct: 14.3, avg_cost_overrun_pct: 7.9 },
+  { agency: "East Coast Railway", total_projects: 20, delayed_project_count: 4, delay_frequency_pct: 20.0, avg_cost_overrun_pct: 7.8 },
+  { agency: "Indian Oil Corporation Limited [IOCL]", total_projects: 19, delayed_project_count: 7, delay_frequency_pct: 36.8, avg_cost_overrun_pct: 15.6 },
+  { agency: "Rail Vikas Nigam Limited [RVNL]", total_projects: 18, delayed_project_count: 6, delay_frequency_pct: 33.3, avg_cost_overrun_pct: 8.6 },
   { agency: "Steel Authority of India Limited [SAIL]", total_projects: 12, delayed_project_count: 3, delay_frequency_pct: 25.0, avg_cost_overrun_pct: 11.8 }
 ];

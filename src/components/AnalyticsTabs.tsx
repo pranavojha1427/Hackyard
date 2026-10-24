@@ -71,7 +71,7 @@ function AgencyTab({ data }: { data: AgencyRow[] }) {
           Agency Performance Rankings
         </CardTitle>
         <p className="text-slate-600 text-sm mt-1">
-          Agencies sorted by best performance (lowest delay frequency). Rows highlighted in red indicate agencies with &gt;40% delayed projects.
+          Agencies ranked by portfolio size and execution performance. Rows highlighted in red indicate agencies with &gt;40% delayed projects.
         </p>
       </CardHeader>
       <CardContent className="p-0 overflow-x-auto">
