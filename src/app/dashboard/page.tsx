@@ -33,10 +33,17 @@ export default async function DashboardPage() {
   let mongoAgencyProjects: any[] = [];
   let kpi: any = null;
 
+  function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))
+    ]);
+  }
+
   try {
     const supabase = await createClient();
 
-    // Fetch all projects using pagination IN PARALLEL
+    // Fetch all projects using pagination IN PARALLEL with a strict 1-second timeout
     const pageSize = 1000;
     const estimatedTotal = 12000;
     const pages = Math.ceil(estimatedTotal / pageSize);
@@ -49,14 +56,18 @@ export default async function DashboardPage() {
         .range(page * pageSize, (page + 1) * pageSize - 1)
     );
 
-    const [results, agencyRes, benchRes, alertsRes, mongoProjects, kpiRes] = await Promise.all([
-      Promise.all(promises.map(p => Promise.resolve(p).catch(e => ({ data: null, error: e })))).catch(() => []),
-      Promise.resolve(supabase.from("agency_performance_rankings").select("*").order("delay_frequency_pct", { ascending: false })).catch(e => ({ data: null, error: e })),
-      Promise.resolve(supabase.from("sector_benchmarks").select("*")).catch(e => ({ data: null, error: e })),
-      Promise.resolve(supabase.from("project_alerts").select("*").order("id", { ascending: false })).catch(e => ({ data: null, error: e })),
-      getMongoProjects().catch(e => { console.warn("MongoDB Fetch Error:", e); return []; }),
-      Promise.resolve(supabase.rpc("get_portfolio_kpis")).catch(e => ({ data: null, error: e })),
-    ]);
+    const [results, agencyRes, benchRes, alertsRes, mongoProjects, kpiRes] = await withTimeout(
+      Promise.all([
+        Promise.all(promises.map(p => Promise.resolve(p).catch(e => ({ data: null, error: e })))).catch(() => []),
+        Promise.resolve(supabase.from("agency_performance_rankings").select("*").order("delay_frequency_pct", { ascending: false })).catch(e => ({ data: null, error: e })),
+        Promise.resolve(supabase.from("sector_benchmarks").select("*")).catch(e => ({ data: null, error: e })),
+        Promise.resolve(supabase.from("project_alerts").select("*").order("id", { ascending: false })).catch(e => ({ data: null, error: e })),
+        getMongoProjects().catch(e => { console.warn("MongoDB Fetch Error:", e); return []; }),
+        Promise.resolve(supabase.rpc("get_portfolio_kpis")).catch(e => ({ data: null, error: e })),
+      ]),
+      600,
+      [[], { data: null }, { data: null }, { data: null }, [], { data: null }] as any
+    );
 
     for (const res of results) {
       if (res?.data) {
@@ -88,7 +99,7 @@ export default async function DashboardPage() {
   }
 
   const baseProjects = allProjectsRaw;
-  const overrides = await getProjectOverrides(baseProjects.map((p: any) => p.id)).catch(() => []);
+  const overrides = await withTimeout(getProjectOverrides(), 400, []).catch(() => []);
   
   const allProjects = [
     ...applyProjectOverrides(baseProjects, overrides),

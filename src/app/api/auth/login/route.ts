@@ -20,15 +20,16 @@ export async function POST(req: Request) {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
 
+    const anyUser = user as any;
     await createSession({
-      id: user._id.toString(),
-      name: user.name,
-      email: user.email,
-      role: user.role as Role,
-      ministry: user.ministry,
-      agency: user.agency,
-      state: user.state,
-      country: user.country,
+      id: anyUser._id.toString(),
+      name: anyUser.name,
+      email: anyUser.email,
+      role: anyUser.role as Role,
+      ministry: anyUser.ministry,
+      agency: anyUser.agency,
+      state: anyUser.state,
+      country: anyUser.country || "India",
     });
 
     return NextResponse.json({ ok: true, role: user.role });

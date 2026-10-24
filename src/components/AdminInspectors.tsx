@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { UserPlus, Shield, Loader2, MapPin, Briefcase, Phone, Hash } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { BRICS_STATES } from "@/lib/constants";
+import { INDIAN_STATES } from "@/lib/constants";
 
 export default function AdminInspectors({ currentUser }: { currentUser?: any }) {
   const [inspectors, setInspectors] = useState<any[]>([]);
@@ -74,7 +74,7 @@ export default function AdminInspectors({ currentUser }: { currentUser?: any }) 
             <div>
               <label className="text-xs text-slate-500 uppercase font-semibold">State</label>
               <select value={state} onChange={e=>setState(e.target.value)} disabled={currentUser?.role === "state_admin"} className="w-full mt-1 p-2 border border-slate-300 rounded focus:border-indigo-500 outline-none bg-white disabled:bg-slate-100 disabled:text-slate-500">
-                {((currentUser?.country && BRICS_STATES[currentUser.country]) || BRICS_STATES["India"]).map(s => <option key={s} value={s}>{s}</option>)}
+                {INDIAN_STATES.map((s: string) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div><label className="text-xs text-slate-500 uppercase font-semibold">Phone No (Login ID)</label><input type="tel" required value={phone} onChange={e=>setPhone(e.target.value)} className="w-full mt-1 p-2 border border-slate-300 rounded focus:border-indigo-500 outline-none" /></div>

@@ -147,8 +147,7 @@ Provide deep intelligence based solely on the provided project context.`;
       console.error("Gemini API Error:", res.status, errText);
       throw new Error(`Gemini API error: ${res.status}`);
     }
-
-    if (res.status === 503) { await new Promise(r => setTimeout(r, 1500)); res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent", { method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GOOGLE_API_KEY! }, body: JSON.stringify({contents: [{ parts: [{ text: chatPrompt }] }], generationConfig: { temperature: 0.1 }}) }); } const data = await res.json();
+    const data = await res.json();
     let responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response received.";
     
     console.log("Final ResponseText:", responseText);

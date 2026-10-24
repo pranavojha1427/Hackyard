@@ -11,10 +11,69 @@ import { Loader2, MessageSquare, ShieldCheck, FileCheck } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { SessionUser } from "@/lib/auth";
 
+export function computeProjectAiScore(p: any) {
+  const original_cost = Number(p.original_cost) || 0;
+  const revised_cost = Number(p.revised_cost) || (original_cost > 0 ? original_cost : 0);
+  const expenditure = Number(p.cumulative_expenditure) || 0;
+  const physical_progress = Number(p.physical_progress) || 0;
+
+  const cost_escalation = revised_cost - original_cost;
+  let cost_overrun_percent = 0.0;
+  if (original_cost > 0) {
+    cost_overrun_percent = (cost_escalation / original_cost) * 100;
+  }
+      
+  let financial_progress = 0.0;
+  if (revised_cost > 0) {
+    financial_progress = (expenditure / revised_cost) * 100;
+  }
+      
+  const implementation_discrepancy = physical_progress - financial_progress;
+  
+  const cost_overrun_score = Math.max(0.0, Math.min(100.0, cost_overrun_percent * 2));
+  const schedule_risk_score = Math.max(0.0, Math.min(100.0, (100.0 - physical_progress) + Math.max(0.0, -implementation_discrepancy)));
+
+  let overall_health = "On Track";
+  let recommendation = "Maintain current monitoring protocols. Project execution velocity remains well-aligned with financial deployments, reflecting strong governance. Continue regular milestone tracking and ensure risk mitigation contingency funds remain available to sustain this operational momentum.";
+
+  if (cost_overrun_percent > 10.0 && physical_progress < 50.0) {
+    overall_health = "Critical";
+    recommendation = "Trigger immediate financial scrutiny and halt further disbursements. Given the cost overrun exceeding 10% coupled with physical progress below 50%, an exhaustive forensic audit is highly recommended to identify fund leakages and restructure timelines.";
+  } else if (cost_overrun_score > 30.0 || schedule_risk_score > 50.0) {
+    overall_health = "At Risk";
+    recommendation = "Conduct a thorough review of the project execution plan immediately. With schedule and cost risk scores climbing, it is vital to mandate contractor performance metrics, expedite pending clearances, and streamline supply chains to prevent further delays.";
+  }
+
+  const shap_explanations: string[] = [];
+  if (overall_health === "Critical" || overall_health === "At Risk") {
+    if (cost_overrun_percent > 10.0) {
+      shap_explanations.push(`Cost overrun is ${cost_overrun_percent.toFixed(1)}% -> High cost-risk contribution`);
+    }
+    if (physical_progress < 50.0) {
+      shap_explanations.push(`Physical progress is ${physical_progress.toFixed(1)}% below plan -> High schedule-risk contribution`);
+    }
+    if (cost_escalation > 0) {
+      shap_explanations.push(`Revised cost increased by ₹${cost_escalation.toFixed(1)} Cr -> Medium-high cost-risk contribution`);
+    }
+    if (implementation_discrepancy < -10) {
+      shap_explanations.push(`Financial progress exceeds physical by ${(-implementation_discrepancy).toFixed(1)}% -> Fund diversion risk`);
+    }
+  } else {
+    shap_explanations.push(`Expenditure velocity matches milestone progress -> Balanced risk profile`);
+  }
+
+  return {
+    overall_health,
+    recommendation,
+    SHAP_Explanation: shap_explanations,
+    cost_overrun_score: cost_overrun_score.toFixed(0),
+    schedule_risk_score: schedule_risk_score.toFixed(0)
+  };
+}
+
 export function ProjectTableAI({ projects, currentUser }: { projects: any[], currentUser?: SessionUser }) {
   const [aiScores, setAiScores] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(true);
-  const [hasFailed, setHasFailed] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -33,35 +92,18 @@ export function ProjectTableAI({ projects, currentUser }: { projects: any[], cur
   const [adminFeedbacks, setAdminFeedbacks] = useState<any[]>([]);
   const [isLoadingFeedbacks, setIsLoadingFeedbacks] = useState(false);
 
-  const fetchScores = async () => {
-    setLoading(true);
-    setHasFailed(false);
-    const maxRetries = 3;
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const scores = await getAIHealthScores();
-        if (scores && Object.keys(scores).length > 0) {
-          setAiScores(scores);
-          setLoading(false);
-          return;
-        }
-        if (attempt < maxRetries) {
-          await new Promise(r => setTimeout(r, 2000));
-        }
-      } catch (error) {
-        console.error(`AI scores fetch attempt ${attempt} failed:`, error);
-        if (attempt < maxRetries) {
-          await new Promise(r => setTimeout(r, 2000));
-        }
-      }
-    }
-    setHasFailed(true);
-    setLoading(false);
-  };
-
   useEffect(() => {
-    fetchScores();
+    let isMounted = true;
+    getAIHealthScores()
+      .then((scores) => {
+        if (isMounted && scores && Object.keys(scores).length > 0) {
+          setAiScores(scores);
+        }
+      })
+      .catch((err) => {
+        console.warn("Background AI scores notice:", err);
+      });
+    return () => { isMounted = false; };
   }, []);
 
   useEffect(() => {
@@ -174,24 +216,6 @@ export function ProjectTableAI({ projects, currentUser }: { projects: any[], cur
 
   return (
     <div className="relative">
-      {loading && (
-        <div className="absolute inset-0 bg-slate-50/50 backdrop-blur-sm z-10 flex items-center justify-center border-t border-slate-200">
-           <div className="flex flex-col items-center gap-2">
-             <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
-             <p className="text-sm font-mono text-blue-400">AI Engine evaluating {projects.length.toLocaleString()} projects...</p>
-           </div>
-        </div>
-      )}
-      {hasFailed && !loading && (
-        <div className="absolute inset-0 bg-slate-50/80 backdrop-blur-sm z-10 flex items-center justify-center border-t border-slate-200">
-           <div className="flex flex-col items-center gap-3">
-             <p className="text-sm font-mono text-red-400">AI Backend unavailable. Ensure backend API is correctly deployed and reachable.</p>
-             <button onClick={fetchScores} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-mono rounded transition-colors">
-               Retry
-             </button>
-           </div>
-        </div>
-      )}
       <Table>
         <TableHeader className="bg-slate-50">
           <TableRow className="border-slate-200 hover:bg-slate-50/50">
@@ -208,29 +232,7 @@ export function ProjectTableAI({ projects, currentUser }: { projects: any[], cur
         </TableHeader>
         <TableBody>
           {paginatedProjects.map((p) => {
-            let aiData = aiScores[p.id];
-            
-            // Hackathon Shortcut: If no AI Data found, and it's a mock project (has ai_health_score),
-            // generate a fake AI interpretation so the UI functions globally.
-            if (!aiData && p.ai_health_score !== undefined) {
-              const h = p.ai_health_score;
-              let oh = "On Track";
-              if (h < 40) oh = "Critical";
-              else if (h < 60) oh = "High";
-              else if (h < 80) oh = "Medium";
-              
-              aiData = {
-                overall_health: oh,
-                cost_overrun_score: Math.floor(h * 0.8),
-                schedule_risk_score: Math.floor(h * 0.9),
-                recommendation: `Dynamic multi-tenant analysis generated for ${p.country}. AI recommends ${h < 50 ? 'immediate review of budget constraints' : 'maintaining current operational velocity'}.`,
-                SHAP_Explanation: [
-                  `Cost Deviation -> ${p.costOverrunPercent > 20 ? 'High Impact' : 'Low Impact'}`,
-                  `Sector Analysis (${p.sector}) -> Typical`,
-                  `Regional Adjustment (${p.state}) -> Weighted`
-                ]
-              };
-            }
+            const aiData = aiScores[p.id] || computeProjectAiScore(p);
             
             return (
               <TableRow 
@@ -314,29 +316,9 @@ export function ProjectTableAI({ projects, currentUser }: { projects: any[], cur
           
           {(() => {
             if (!selectedProject) return null;
-            let activeAiScore = aiScores[selectedProject.id];
-            
-            if (!activeAiScore && selectedProject.ai_health_score !== undefined) {
-              const h = selectedProject.ai_health_score;
-              let oh = "On Track";
-              if (h < 40) oh = "Critical";
-              else if (h < 60) oh = "High";
-              else if (h < 80) oh = "Medium";
-              
-              activeAiScore = {
-                overall_health: oh,
-                cost_overrun_score: Math.floor(h * 0.8),
-                schedule_risk_score: Math.floor(h * 0.9),
-                recommendation: `Dynamic multi-tenant analysis generated for ${selectedProject.country}. AI recommends ${h < 50 ? 'immediate review of budget constraints' : 'maintaining current operational velocity'}.`,
-                SHAP_Explanation: [
-                  `Cost Deviation -> ${selectedProject.costOverrunPercent > 20 ? 'High Impact' : 'Low Impact'}`,
-                  `Sector Analysis (${selectedProject.sector}) -> Typical`,
-                  `Regional Adjustment (${selectedProject.state}) -> Weighted`
-                ]
-              };
-            }
+            const activeAiScore = aiScores[selectedProject.id] || computeProjectAiScore(selectedProject);
 
-            return activeAiScore ? (
+            return (
             <div className="space-y-6">
               <div className="space-y-2">
                 <h3 className="font-mono text-xs text-slate-500 uppercase tracking-widest border-b border-slate-200 pb-1 text-center">Overall Health</h3>
@@ -386,10 +368,6 @@ export function ProjectTableAI({ projects, currentUser }: { projects: any[], cur
                   <p className="text-2xl font-black text-slate-900">{activeAiScore?.schedule_risk_score}</p>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-10 font-mono text-slate-500 text-sm">
-              Loading AI Explanation...
             </div>
           );
           })()}
