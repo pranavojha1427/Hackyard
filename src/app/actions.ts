@@ -5,7 +5,13 @@ import { getMongoProjects } from "@/lib/project-store";
 
 import { FALLBACK_PROJECTS } from "@/lib/fallback-data";
 
+let cachedHealthScores: { data: Record<string, any>; timestamp: number } | null = null;
+const HEALTH_CACHE_TTL = 5 * 60 * 1000;
+
 export async function getAIHealthScores() {
+  if (cachedHealthScores && Date.now() - cachedHealthScores.timestamp < HEALTH_CACHE_TTL) {
+    return cachedHealthScores.data;
+  }
   let projects: any[] = [];
 
   function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
@@ -146,6 +152,11 @@ export async function getAIHealthScores() {
       // Graceful fallback to local MoSPI calculations
     }
   }
+
+  cachedHealthScores = {
+    data: scores,
+    timestamp: Date.now()
+  };
 
   return scores;
 }

@@ -18,11 +18,15 @@ type CacheEntry<T> = {
   timestamp: number;
 };
 
-let cachedGlobalProjects: CacheEntry<any[]> | null = null;
+const cachedProjectsMap = new Map<string, CacheEntry<any[]>>();
 let cachedAgencyRankings: CacheEntry<any[]> | null = null;
 let cachedBenchmarks: CacheEntry<any[]> | null = null;
 let cachedAlerts: CacheEntry<any[]> | null = null;
+let cachedPortfolioKpi: CacheEntry<any> | null = null;
+let cachedMongoProjects: CacheEntry<any[]> | null = null;
+let cachedOverrides: CacheEntry<any[]> | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const SHORT_CACHE_TTL_MS = 60 * 1000; // 1 minute
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -42,6 +46,7 @@ export default async function DashboardPage() {
   let benchData: any[] = [];
   let alertsData: any[] = [];
   let mongoAgencyProjects: any[] = [];
+  let overridesData: any[] = [];
   let kpi: any = null;
 
   function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
@@ -54,10 +59,14 @@ export default async function DashboardPage() {
   try {
     const supabase = await createClient();
     const isFiltered = Object.keys(matchFilter).length > 0;
+    const filterKey = JSON.stringify(matchFilter);
 
-    // 1. Target projects query: if role-filtered (e.g. state_admin), fetch targeted batch in 1 request
+    // 1. Target projects query (cached per role/filter for 5 minutes)
     let projectPromise: Promise<any>;
-    if (isFiltered) {
+    const cachedEntry = cachedProjectsMap.get(filterKey);
+    if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL_MS) {
+      projectPromise = Promise.resolve([{ data: cachedEntry.data }]);
+    } else if (isFiltered) {
       projectPromise = Promise.resolve(
         supabase
           .from("projects")
@@ -65,8 +74,6 @@ export default async function DashboardPage() {
           .match(matchFilter)
           .limit(3000)
       ).then(res => [res]).catch(() => []);
-    } else if (cachedGlobalProjects && Date.now() - cachedGlobalProjects.timestamp < CACHE_TTL_MS) {
-      projectPromise = Promise.resolve([{ data: cachedGlobalProjects.data }]);
     } else {
       const pageSize = 1000;
       const estimatedTotal = 12000;
@@ -106,13 +113,40 @@ export default async function DashboardPage() {
       alertsPromise = Promise.resolve(supabase.from("project_alerts").select("*").order("id", { ascending: false })).catch(e => ({ data: null, error: e }));
     }
 
-    const [results, agencyRes, benchRes, alertsRes, mongoProjects, kpiRes] = await Promise.all([
-      withTimeout(projectPromise, isFiltered ? 2000 : 4500, []),
-      withTimeout(agencyPromise, 2500, { data: null, error: null }),
-      withTimeout(benchPromise, 2500, { data: null, error: null }),
-      withTimeout(alertsPromise, 2500, { data: null, error: null }),
-      withTimeout(getMongoProjects().catch(() => []), 800, []),
-      withTimeout(Promise.resolve(supabase.rpc("get_portfolio_kpis")).catch(e => ({ data: null, error: e })), 2000, { data: null, error: null }),
+    // 5. KPI RPC (cached for 5 minutes, omitted for filtered views)
+    let kpiPromise: Promise<any>;
+    if (isFiltered) {
+      kpiPromise = Promise.resolve({ data: null });
+    } else if (cachedPortfolioKpi && Date.now() - cachedPortfolioKpi.timestamp < CACHE_TTL_MS) {
+      kpiPromise = Promise.resolve({ data: [cachedPortfolioKpi.data] });
+    } else {
+      kpiPromise = Promise.resolve(supabase.rpc("get_portfolio_kpis")).catch(e => ({ data: null, error: e }));
+    }
+
+    // 6. Mongo projects (cached for 1 minute)
+    let mongoPromise: Promise<any>;
+    if (cachedMongoProjects && Date.now() - cachedMongoProjects.timestamp < SHORT_CACHE_TTL_MS) {
+      mongoPromise = Promise.resolve(cachedMongoProjects.data);
+    } else {
+      mongoPromise = getMongoProjects().catch(() => []);
+    }
+
+    // 7. Mongo overrides (cached for 1 minute)
+    let overridesPromise: Promise<any>;
+    if (cachedOverrides && Date.now() - cachedOverrides.timestamp < SHORT_CACHE_TTL_MS) {
+      overridesPromise = Promise.resolve(cachedOverrides.data);
+    } else {
+      overridesPromise = getProjectOverrides().catch(() => []);
+    }
+
+    const [results, agencyRes, benchRes, alertsRes, mongoProjects, kpiRes, fetchedOverrides] = await Promise.all([
+      withTimeout(projectPromise, isFiltered ? 1500 : 3500, []),
+      withTimeout(agencyPromise, 1500, { data: null, error: null }),
+      withTimeout(benchPromise, 1500, { data: null, error: null }),
+      withTimeout(alertsPromise, 1500, { data: null, error: null }),
+      withTimeout(mongoPromise, 300, []),
+      withTimeout(kpiPromise, 1500, { data: null, error: null }),
+      withTimeout(overridesPromise, 300, []),
     ]);
 
     for (const res of results) {
@@ -126,6 +160,7 @@ export default async function DashboardPage() {
     alertsData = alertsRes?.data || [];
     mongoAgencyProjects = mongoProjects || [];
     kpi = kpiRes?.data?.[0] || null;
+    overridesData = fetchedOverrides || [];
 
     // Populate caches if fetched freshly
     if (agencyData.length > 0 && !cachedAgencyRankings) {
@@ -137,8 +172,17 @@ export default async function DashboardPage() {
     if (alertsData.length > 0 && !cachedAlerts) {
       cachedAlerts = { data: alertsData, timestamp: Date.now() };
     }
-    if (!isFiltered && allProjectsRaw.length > 0 && !cachedGlobalProjects) {
-      cachedGlobalProjects = { data: allProjectsRaw, timestamp: Date.now() };
+    if (kpi && !cachedPortfolioKpi) {
+      cachedPortfolioKpi = { data: kpi, timestamp: Date.now() };
+    }
+    if (mongoAgencyProjects.length > 0 && !cachedMongoProjects) {
+      cachedMongoProjects = { data: mongoAgencyProjects, timestamp: Date.now() };
+    }
+    if (overridesData.length > 0 && !cachedOverrides) {
+      cachedOverrides = { data: overridesData, timestamp: Date.now() };
+    }
+    if (allProjectsRaw.length > 0) {
+      cachedProjectsMap.set(filterKey, { data: allProjectsRaw, timestamp: Date.now() });
     }
   } catch (err) {
     console.warn("Database initialization/fetch warning:", err);
@@ -159,7 +203,7 @@ export default async function DashboardPage() {
   }
 
   const baseProjects = allProjectsRaw;
-  const overrides = await withTimeout(getProjectOverrides(), 400, []).catch(() => []);
+  const overrides = overridesData;
   
   const allProjects = [
     ...applyProjectOverrides(baseProjects, overrides),

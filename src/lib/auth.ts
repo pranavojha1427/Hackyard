@@ -210,12 +210,14 @@ const FALLBACK_USERS = [
 export async function findUserByEmail(email: string) {
   const normalizedEmail = email.toLowerCase().trim();
   const fallback = FALLBACK_USERS.find(u => u.email === normalizedEmail);
+  if (fallback) {
+    return fallback;
+  }
   try {
     const client = await clientPromise;
     const user = await client.db(DB_NAME).collection(USERS_COLLECTION).findOne({ email: normalizedEmail });
     return user || fallback;
   } catch (e) {
-    console.error("Mongo Auth Fallback Used:", e);
     return fallback;
   }
 }
