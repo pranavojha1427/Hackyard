@@ -23,10 +23,12 @@ export default function LoginPage() {
     });
     const data = await res.json();
 
-    if (!res.ok) setError(data.error || "Login failed.");
-    else router.push("/dashboard");
-
-    setLoading(false);
+    if (!res.ok) {
+      setError(data.error || "Login failed.");
+      setLoading(false);
+    } else {
+      window.location.href = "/dashboard";
+    }
   }
 
   return (

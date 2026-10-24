@@ -13,6 +13,17 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+type CacheEntry<T> = {
+  data: T;
+  timestamp: number;
+};
+
+let cachedGlobalProjects: CacheEntry<any[]> | null = null;
+let cachedAgencyRankings: CacheEntry<any[]> | null = null;
+let cachedBenchmarks: CacheEntry<any[]> | null = null;
+let cachedAlerts: CacheEntry<any[]> | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 export default async function DashboardPage() {
   const session = await getSession();
 
@@ -42,51 +53,66 @@ export default async function DashboardPage() {
 
   try {
     const supabase = await createClient();
+    const isFiltered = Object.keys(matchFilter).length > 0;
 
-    // Fetch all projects using pagination IN PARALLEL with a strict 1-second timeout
-    const pageSize = 1000;
-    const estimatedTotal = 12000;
-    const pages = Math.ceil(estimatedTotal / pageSize);
-    
-    const promises = Array.from({ length: pages }).map((_, page) => 
-      supabase
-        .from("projects")
-        .select("id, project_name, project_code, sector, ministry, agency, state, original_cost, revised_cost, cumulative_expenditure, physical_progress, status, original_doc, revised_doc, contractor_delay, land_acquisition_issue, forest_clearance_issue")
-        .match(matchFilter)
-        .range(page * pageSize, (page + 1) * pageSize - 1)
-    );
+    // 1. Target projects query: if role-filtered (e.g. state_admin), fetch targeted batch in 1 request
+    let projectPromise: Promise<any>;
+    if (isFiltered) {
+      projectPromise = Promise.resolve(
+        supabase
+          .from("projects")
+          .select("id, project_name, project_code, sector, ministry, agency, state, original_cost, revised_cost, cumulative_expenditure, physical_progress, status, original_doc, revised_doc, contractor_delay, land_acquisition_issue, forest_clearance_issue")
+          .match(matchFilter)
+          .limit(3000)
+      ).then(res => [res]).catch(() => []);
+    } else if (cachedGlobalProjects && Date.now() - cachedGlobalProjects.timestamp < CACHE_TTL_MS) {
+      projectPromise = Promise.resolve([{ data: cachedGlobalProjects.data }]);
+    } else {
+      const pageSize = 1000;
+      const estimatedTotal = 12000;
+      const pages = Math.ceil(estimatedTotal / pageSize);
+      const promises = Array.from({ length: pages }).map((_, page) => 
+        supabase
+          .from("projects")
+          .select("id, project_name, project_code, sector, ministry, agency, state, original_cost, revised_cost, cumulative_expenditure, physical_progress, status, original_doc, revised_doc, contractor_delay, land_acquisition_issue, forest_clearance_issue")
+          .range(page * pageSize, (page + 1) * pageSize - 1)
+      );
+      projectPromise = Promise.all(promises.map(p => Promise.resolve(p).catch(e => ({ data: null, error: e }))));
+    }
+
+    // 2. Target agency rankings (cached for 5 minutes)
+    let agencyPromise: Promise<any>;
+    if (cachedAgencyRankings && Date.now() - cachedAgencyRankings.timestamp < CACHE_TTL_MS) {
+      agencyPromise = Promise.resolve({ data: cachedAgencyRankings.data });
+    } else {
+      agencyPromise = Promise.resolve(
+        supabase.from("agency_performance_rankings").select("*").order("delay_frequency_pct", { ascending: false })
+      ).catch(e => ({ data: null, error: e }));
+    }
+
+    // 3. Sector benchmarks (cached for 5 minutes)
+    let benchPromise: Promise<any>;
+    if (cachedBenchmarks && Date.now() - cachedBenchmarks.timestamp < CACHE_TTL_MS) {
+      benchPromise = Promise.resolve({ data: cachedBenchmarks.data });
+    } else {
+      benchPromise = Promise.resolve(supabase.from("sector_benchmarks").select("*")).catch(e => ({ data: null, error: e }));
+    }
+
+    // 4. Alerts (cached for 5 minutes)
+    let alertsPromise: Promise<any>;
+    if (cachedAlerts && Date.now() - cachedAlerts.timestamp < CACHE_TTL_MS) {
+      alertsPromise = Promise.resolve({ data: cachedAlerts.data });
+    } else {
+      alertsPromise = Promise.resolve(supabase.from("project_alerts").select("*").order("id", { ascending: false })).catch(e => ({ data: null, error: e }));
+    }
 
     const [results, agencyRes, benchRes, alertsRes, mongoProjects, kpiRes] = await Promise.all([
-      withTimeout(
-        Promise.all(promises.map(p => Promise.resolve(p).catch(e => ({ data: null, error: e })))).catch(() => []),
-        4500,
-        []
-      ),
-      withTimeout(
-        Promise.resolve(supabase.from("agency_performance_rankings").select("*").order("delay_frequency_pct", { ascending: false })).catch(e => ({ data: null, error: e })),
-        3000,
-        { data: null, error: null }
-      ),
-      withTimeout(
-        Promise.resolve(supabase.from("sector_benchmarks").select("*")).catch(e => ({ data: null, error: e })),
-        3000,
-        { data: null, error: null }
-      ),
-      withTimeout(
-        Promise.resolve(supabase.from("project_alerts").select("*").order("id", { ascending: false })).catch(e => ({ data: null, error: e })),
-        3000,
-        { data: null, error: null }
-      ),
-      withTimeout(
-        getMongoProjects().catch(() => []),
-        1200,
-        []
-      ),
-      withTimeout(
-        Promise.resolve(supabase.rpc("get_portfolio_kpis")).catch(e => ({ data: null, error: e })),
-        3000,
-        { data: null, error: null }
-      ),
+      withTimeout(projectPromise, isFiltered ? 2000 : 4500, []),
+      withTimeout(agencyPromise, 2500, { data: null, error: null }),
+      withTimeout(benchPromise, 2500, { data: null, error: null }),
+      withTimeout(alertsPromise, 2500, { data: null, error: null }),
+      withTimeout(getMongoProjects().catch(() => []), 800, []),
+      withTimeout(Promise.resolve(supabase.rpc("get_portfolio_kpis")).catch(e => ({ data: null, error: e })), 2000, { data: null, error: null }),
     ]);
 
     for (const res of results) {
@@ -100,6 +126,20 @@ export default async function DashboardPage() {
     alertsData = alertsRes?.data || [];
     mongoAgencyProjects = mongoProjects || [];
     kpi = kpiRes?.data?.[0] || null;
+
+    // Populate caches if fetched freshly
+    if (agencyData.length > 0 && !cachedAgencyRankings) {
+      cachedAgencyRankings = { data: agencyData, timestamp: Date.now() };
+    }
+    if (benchData.length > 0 && !cachedBenchmarks) {
+      cachedBenchmarks = { data: benchData, timestamp: Date.now() };
+    }
+    if (alertsData.length > 0 && !cachedAlerts) {
+      cachedAlerts = { data: alertsData, timestamp: Date.now() };
+    }
+    if (!isFiltered && allProjectsRaw.length > 0 && !cachedGlobalProjects) {
+      cachedGlobalProjects = { data: allProjectsRaw, timestamp: Date.now() };
+    }
   } catch (err) {
     console.warn("Database initialization/fetch warning:", err);
   }
