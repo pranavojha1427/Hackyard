@@ -4,9 +4,11 @@
     "private": true,
     "scripts": {
         "dev": "next dev",
-        "build": "next build",
+        "build": "next build --webpack",
         "start": "next start",
         "lint": "eslint",
+        "typecheck": "tsc --noEmit",
+        "test": "tsc --noEmit && next build --webpack",
         "seed:admin": "node --env-file=.env scripts/seed-admin.mjs",
         "setup:db": "node --env-file=.env scripts/setup-project-indexes.mjs"
     },

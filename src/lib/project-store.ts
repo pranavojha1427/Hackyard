@@ -20,25 +20,16 @@ export type EditableProject = {
 };
 
 export async function getMongoProjects(agency?: string) {
-  try {
-    const client = await clientPromise;
-    const db = client.db(DB_NAME);
-    return await db.collection(PROJECTS_COLLECTION).find(agency ? { agency } : {}).sort({ updatedAt: -1 }).limit(100).toArray();
-  } catch (e) {
-    console.warn("Mongo getMongoProjects error:", e);
-    return [];
-  }
+  const client = await clientPromise;
+  const db = client.db(DB_NAME);
+  return db.collection(PROJECTS_COLLECTION).find(agency ? { agency } : {}).sort({ updatedAt: -1 }).toArray();
 }
 
-export async function getProjectOverrides(projectIds?: Array<string | number>) {
-  try {
-    const client = await clientPromise;
-    const db = client.db(DB_NAME);
-    return await db.collection(PROJECT_OVERRIDES_COLLECTION).find({}).limit(500).toArray();
-  } catch (e) {
-    console.warn("Mongo getProjectOverrides error:", e);
-    return [];
-  }
+export async function getProjectOverrides(projectIds: Array<string | number>) {
+  if (!projectIds.length) return [];
+  const client = await clientPromise;
+  const db = client.db(DB_NAME);
+  return db.collection(PROJECT_OVERRIDES_COLLECTION).find({ projectId: { $in: projectIds.map(String) } }).toArray();
 }
 
 export function applyProjectOverrides(projects: any[], overrides: any[]) {

@@ -53,21 +53,16 @@ export default function InvestmentParity({ projects }: { projects: any[] }) {
     formData.append("expected_cost", String(totalActiveCost));
     
     try {
-      const parityEndpoint = process.env.NEXT_PUBLIC_PARITY_API_URL || "https://helping-affiliation-las-weekends.trycloudflare.com/api/parity/analyze";
-      const res = await fetch(parityEndpoint, {
+      const res = await fetch("https://helping-affiliation-las-weekends.trycloudflare.com/api/parity/analyze", {
         method: "POST",
-        body: formData,
-        signal: AbortSignal.timeout(3000)
+        body: formData
       });
       const data = await res.json();
       setAnalysisResult(data);
     } catch (e) {
-      console.warn("Notice: External parity API unreachable. Using native macro parity analysis.");
-      setAnalysisResult({ 
-        total_tracked_budget: totalActiveCost,
-        status: "Active Tracking",
-        summary: "Live macro analysis synchronized with 1,981 infrastructure projects across India."
-      });
+      console.error(e);
+      // Fallback in case python server is down
+      setAnalysisResult({ error: "Backend server unreachable. Using fallback macro data." });
     }
     
     setIsUploading(false);
@@ -169,7 +164,7 @@ export default function InvestmentParity({ projects }: { projects: any[] }) {
                     <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} tick={{ fontSize: 12, fill: '#64748b' }} />
                     <YAxis tick={{ fontSize: 12, fill: '#64748b' }} />
                     <Tooltip 
-                      formatter={(value: any) => [`₹${Number(value || 0).toLocaleString()} Cr`, "Cost"]}
+                      formatter={(value: any) => [`₹${Number(value || 0).toLocaleString()} Cr`]}
                       contentStyle={{ fontFamily: 'monospace', fontSize: '12px' }}
                     />
                     <Legend wrapperStyle={{ paddingTop: '20px', fontFamily: 'monospace', fontSize: '12px' }} />

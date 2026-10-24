@@ -39,41 +39,23 @@ export async function POST(req: Request) {
 
     
     let shap_explanations: string[] = [];
-    if (cost_overrun_percent > 10.0) {
-      shap_explanations.push(`Cost overrun is ${cost_overrun_percent.toFixed(1)}% -> High cost-risk contribution`);
-    }
-    if (physical_progress < 50.0) {
-      shap_explanations.push(`Physical progress is ${physical_progress.toFixed(1)}% below plan -> High schedule-risk contribution`);
-    }
-    if (cost_escalation > 0) {
-      shap_explanations.push(`Revised cost increased by ₹${cost_escalation.toFixed(1)} Cr -> Medium-high cost-risk contribution`);
-    }
-    if (implementation_discrepancy < -10) {
-      shap_explanations.push(`Financial progress exceeds physical by ${(-implementation_discrepancy).toFixed(1)}% -> Fund diversion risk`);
-    }
-
-    if (process.env.ML_API_URL) {
-      try {
-        const res = await fetch(`${process.env.ML_API_URL}/api/ml/shap`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            project_id: data.project_id || "test",
-            original_cost: original_cost,
-            revised_cost: revised_cost,
-            physical_progress: physical_progress
-          }),
-          signal: AbortSignal.timeout(1000)
+    try {
+        const res = await fetch("https://helping-affiliation-las-weekends.trycloudflare.com/api/ml/shap", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                project_id: data.project_id || "test",
+                original_cost: original_cost,
+                revised_cost: revised_cost,
+                physical_progress: physical_progress
+            })
         });
         if (res.ok) {
-          const mlData = await res.json();
-          if (mlData.natural_language_explanation) {
+            const mlData = await res.json();
             shap_explanations = [ mlData.natural_language_explanation ];
-          }
         }
-      } catch (e) {
-        // Fallback to local SHAP explanations
-      }
+    } catch (e) {
+        console.error("Python ML API error:", e);
     }
 
 

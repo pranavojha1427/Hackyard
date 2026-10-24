@@ -7,47 +7,18 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    let active = true;
-    fetch("/api/notifications")
-      .then(async (r) => {
-        if (!r.ok) return [];
-        const text = await r.text();
-        if (!text) return [];
-        try {
-          return JSON.parse(text);
-        } catch {
-          return [];
-        }
-      })
-      .then((data) => {
-        if (active && Array.isArray(data)) {
-          setNotifications(data);
-        }
-      })
-      .catch((err) => {
-        console.warn("Notice: notifications fetch warning:", err);
-      });
-
-    return () => {
-      active = false;
-    };
+    fetch("/api/notifications").then(r => r.json()).then(data => {
+      if(Array.isArray(data)) setNotifications(data);
+    });
   }, []);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const markRead = async () => {
-    try {
-      const unreadIds = notifications.filter(n => !n.isRead).map(n => n._id);
-      if (unreadIds.length === 0) return;
-      await fetch("/api/notifications", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "mark_read", ids: unreadIds })
-      });
-      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-    } catch (e) {
-      console.warn("Notice: markRead warning:", e);
-    }
+    const unreadIds = notifications.filter(n => !n.isRead).map(n => n._id);
+    if(unreadIds.length === 0) return;
+    await fetch("/api/notifications", { method: "PUT", body: JSON.stringify({ action: "mark_read", ids: unreadIds }) });
+    setNotifications(notifications.map(n => ({...n, isRead: true})));
   };
 
   const handleToggle = () => {

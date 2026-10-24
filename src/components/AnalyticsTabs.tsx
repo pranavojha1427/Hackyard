@@ -64,13 +64,11 @@ export function AnalyticsTabs({ activeTab, agencyData, projects, benchmarks, ale
 
 /* ─── Agency Leaderboard Tab ─── */
 function AgencyTab({ data }: { data: AgencyRow[] }) {
-  const displayAgencies = (data || []).filter((a) => a.agency && a.agency !== "Unknown Agency");
-
   return (
     <Card className="bg-white border-slate-200 rounded-none border-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] overflow-hidden">
       <CardHeader>
         <CardTitle className="font-mono uppercase tracking-wide border-b border-slate-200 pb-2">
-          Agency Performance Rankings ({displayAgencies.length} Agencies)
+          Agency Performance Rankings
         </CardTitle>
         <p className="text-slate-600 text-sm mt-1">
           Agencies sorted by best performance (lowest delay frequency). Rows highlighted in red indicate agencies with &gt;40% delayed projects.
@@ -89,7 +87,7 @@ function AgencyTab({ data }: { data: AgencyRow[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {displayAgencies.map((agency, index) => {
+            {data.map((agency, index) => {
               const isHighDelay = agency.delay_frequency_pct > 40;
               return (
                 <TableRow

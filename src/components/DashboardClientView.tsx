@@ -17,7 +17,28 @@ import InvestmentParity from "./InvestmentParity";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionUser } from "@/lib/auth";
 import { I18N } from "@/lib/i18n";
-import { extractAgency, FALLBACK_AGENCY_RANKINGS } from "@/lib/agency-extractor";
+import { 
+  Layers, 
+  Landmark, 
+  TrendingUp, 
+  Activity, 
+  MapPin, 
+  Compass, 
+  Building2, 
+  Search, 
+  X, 
+  ShieldCheck, 
+  Trophy, 
+  ClipboardList, 
+  MessageSquare, 
+  LayoutDashboard, 
+  FileSpreadsheet, 
+  AlertTriangle, 
+  Users, 
+  Sparkles, 
+  Filter,
+  BarChart3
+} from "lucide-react";
 
 
 
@@ -115,14 +136,7 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
   };
 
   const projectsWithMinistry = useMemo(() => {
-    return allProjects.map(p => {
-      const agency = extractAgency(p.project_name, p.sector, p.agency);
-      return { 
-        ...p, 
-        agency,
-        ministry: getMinistry(p.sector, agency, p.project_name, p.original_cost, p.ministry) 
-      };
-    });
+    return allProjects.map(p => ({ ...p, ministry: getMinistry(p.sector, p.agency, p.project_name, p.original_cost, p.ministry) }));
   }, [allProjects]);
 
   // Derive unique options for dropdowns
@@ -236,16 +250,15 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
       else if (name.match(/school|university|iit|nit|education/) || ag.match(/kvs|navodaya/)) sector = "Education";
       else if (name.match(/metro|urban|mrtc|smart city/) || ag.match(/metro/)) sector = "Urban Public Transport";
       const oc = p.original_cost || 0; const rc = p.revised_cost || oc; const exp = p.cumulative_expenditure || 0;
-      const agency = extractAgency(p.project_name, sector, p.agency);
-      return { ...p, agency, sector, cost_overrun_pct: oc > 0 ? ((rc - oc) / oc) * 100 : 0, expenditure_progress_pct: rc > 0 ? (exp / rc) * 100 : 0, physical_progress: p.physical_progress || 0 };
+      return { ...p, sector, cost_overrun_pct: oc > 0 ? ((rc - oc) / oc) * 100 : 0, expenditure_progress_pct: rc > 0 ? (exp / rc) * 100 : 0, physical_progress: p.physical_progress || 0 };
     });
   }, [allProjects]);
 
   const dynamicAgencyData = useMemo(() => {
     const agencyMap = new Map<string, any>();
     benchmarkProjects.forEach(p => {
-      const ag = extractAgency(p.project_name, p.sector, p.agency);
-      if (!ag || ag === "Unknown Agency") return;
+      const ag = p.agency;
+      if (!ag) return;
       if (!agencyMap.has(ag)) {
         agencyMap.set(ag, { agency: ag, total_projects: 0, delayed_project_count: 0, sum_cost_overrun: 0 });
       }
@@ -290,278 +303,503 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
     return results;
   }, [benchmarkProjects]);
 
-  const effectiveAgencyData = useMemo(() => {
-    // 1. Live Supabase agency rankings passed from server
-    if (agencyData && Array.isArray(agencyData) && agencyData.length > 0) {
-      const valid = agencyData.filter((a: any) => a.agency && a.agency !== "Unknown Agency");
-      if (valid.length > 1) return valid;
-    }
-    // 2. Computed dynamic agency metrics from current projects
-    const validDynamic = dynamicAgencyData.filter((a: any) => a.agency && a.agency !== "Unknown Agency");
-    if (validDynamic.length > 1) return validDynamic;
-    
-    // 3. Fallback rankings
-    if (agencyData && agencyData.length > 0 && agencyData[0].agency !== "Unknown Agency") {
-      return agencyData;
-    }
-    return FALLBACK_AGENCY_RANKINGS;
-  }, [agencyData, dynamicAgencyData]);
 
+  const getTabIcon = (id: string) => {
+    switch (id) {
+      case 'dashboard': return <LayoutDashboard className="w-4 h-4" />;
+      case 'complaints': return <MessageSquare className="w-4 h-4" />;
+      case 'gatekeeper': return <FileSpreadsheet className="w-4 h-4" />;
+      case 'accounts': return <Users className="w-4 h-4" />;
+      case 'hotspots': return <MapPin className="w-4 h-4" />;
+      case 'inspectors': return <ShieldCheck className="w-4 h-4" />;
+      case 'proposals': return <ClipboardList className="w-4 h-4" />;
+      case 'my-projects': return <Layers className="w-4 h-4" />;
+      case 'agency': return <Trophy className="w-4 h-4" />;
+      case 'benchmarks': return <BarChart3 className="w-4 h-4" />;
+      case 'risk': return <ShieldCheck className="w-4 h-4" />;
+      case 'alerts': return <AlertTriangle className="w-4 h-4" />;
+      default: return <Sparkles className="w-4 h-4" />;
+    }
+  };
 
   return (
-    <div className="p-3 sm:p-5 md:p-8 bg-slate-50 min-h-screen text-slate-900 font-sans">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-        <div className="flex flex-col gap-2 w-full">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tighter uppercase border-b-4 border-slate-300 pb-2 text-slate-900">
-            PragatiPulse
-          </h1>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
-            <p className="text-slate-600 font-mono text-sm uppercase">Infrastructure Project Monitoring Platform</p>
-            <div className="flex flex-wrap items-center gap-3">
-              {!currentUser && <a href="/pulse" className="text-xs font-mono uppercase bg-indigo-600 text-white px-3 py-2 sm:px-4 sm:py-2 hover:bg-indigo-700 transition-colors font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0₹)] border border-black whitespace-nowrap">Add Complaint</a>}
+    <div className="min-h-screen gov-bg-pattern text-slate-900 font-sans pb-16">
+      {/* Top Tricolor Accent Bar */}
+      <div className="h-1.5 w-full gov-tricolor-gradient" />
+
+      {/* Main Container */}
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+
+        {/* Header */}
+        <header className="mb-8">
+          {/* Top Micro-Line */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-2 text-[11px] font-semibold tracking-wider text-slate-500 uppercase border-b border-slate-200/60 mb-4">
+            <span className="flex items-center gap-1.5 text-slate-700">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Government of India • Ministry of Statistics and Programme Implementation (MoSPI)
+            </span>
+            <span className="hidden sm:inline-block font-mono text-slate-400">
+              Online Computerized Monitoring System (OCMS) • SIH26103
+            </span>
+          </div>
+
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 bg-white/90 backdrop-blur-md p-5 sm:p-6 rounded-2xl border border-slate-200/90 shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-700 via-blue-600 to-indigo-900 flex items-center justify-center text-white shadow-md shadow-indigo-600/25 shrink-0 ring-4 ring-indigo-50">
+                <Activity className="w-7 h-7" />
+              </div>
+              <div>
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900">
+                  Pragati<span className="text-indigo-600">Pulse</span>
+                </h1>
+                <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
+                  Centralized Infrastructure Decision-Support & Risk Governance Platform
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              {!currentUser && (
+                <a 
+                  href="/pulse" 
+                  className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2.5 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition shadow-md shadow-blue-500/20 whitespace-nowrap"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  Citizen Grievance Portal
+                </a>
+              )}
               
               {currentUser ? (
                 <>
-                  <span className="text-xs font-mono uppercase bg-slate-200 px-3 py-2 hidden md:inline-block">
-                    {currentUser.name} - {currentUser.role}
-                    {currentUser.ministry ? ' - ' + currentUser.ministry : ""}
-                    {currentUser.agency ? ' - ' + currentUser.agency : ""}
-                  </span>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/90 border border-slate-200 text-xs font-medium text-slate-700">
+                    <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                    <span className="font-bold text-slate-900">{currentUser.name}</span>
+                    <span className="text-slate-400">|</span>
+                    <span className="uppercase text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                      {currentUser.role}
+                    </span>
+                    {currentUser.ministry && (
+                      <span className="hidden xl:inline text-slate-500 truncate max-w-[200px]">
+                        • {currentUser.ministry}
+                      </span>
+                    )}
+                  </div>
                   <NotificationBell />
-                  <a href="/logout" className="text-xs font-mono uppercase bg-slate-900 text-white px-3 py-2 hover:bg-slate-800 transition-colors">Logout</a>
+                  <a 
+                    href="/logout" 
+                    className="text-xs font-semibold uppercase tracking-wider bg-slate-900 text-white px-3.5 py-2 rounded-xl hover:bg-slate-800 transition shadow-xs"
+                  >
+                    Logout
+                  </a>
                 </>
               ) : (
-                <a href="/login" className="text-xs font-mono uppercase bg-emerald-600 text-white px-6 py-2 hover:bg-emerald-700 transition-colors font-bold shadow-[2px_2px_0px_0px_rgba(0,0,0₹)] border border-black">Login</a>
+                <a 
+                  href="/login" 
+                  className="text-xs font-bold uppercase tracking-wider bg-slate-900 text-white px-5 py-2.5 rounded-xl hover:bg-slate-800 transition shadow-md shadow-slate-900/20"
+                >
+                  Official Login
+                </a>
               )}
             </div>
           </div>
+        </header>
+
+        {/* Tab Navigation */}
+        <div className="mb-8">
+          <div className="flex gap-2 p-1.5 bg-white/80 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-xs overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {(() => {
+              const tabs = [];
+              if (!currentUser) {
+                tabs.push({ id: 'dashboard', label: 'Overview' }, { id: 'complaints', label: 'Citizen Grievances' });
+              } else if (currentUser.role === 'admin') {
+                tabs.push(
+                  { id: 'dashboard', label: 'Priority Engine' },
+                  { id: 'gatekeeper', label: 'PDF Gatekeeper (Parity)' },
+                  { id: 'accounts', label: 'Account Provisioning' }
+                );
+              } else if (currentUser.role === 'state_admin') {
+                tabs.push(
+                  { id: 'dashboard', label: 'State Priority Engine' },
+                  { id: 'hotspots', label: 'Field Hotspots' },
+                  { id: 'inspectors', label: 'Field Inspectors' },
+                  { id: 'proposals', label: 'Bidding / Proposals' },
+                  { id: 'accounts', label: 'Ministry Accounts' }
+                );
+              } else if (currentUser.role === 'ministry') {
+                tabs.push(
+                  { id: 'dashboard', label: 'Executive Dashboard' },
+                  { id: 'hotspots', label: 'Field Reports' },
+                  { id: 'proposals', label: 'Proposals' },
+                  { id: 'complaints', label: 'Citizen Complaints' }
+                );
+              } else if (currentUser.role === 'agency') {
+                tabs.push(
+                  { id: 'dashboard', label: 'Agency Dashboard' },
+                  { id: 'proposals', label: 'Bidding' },
+                  { id: 'my-projects', label: 'My Projects' },
+                  { id: 'complaints', label: 'Assigned Complaints' }
+                );
+              }
+              
+              if (currentUser) {
+                tabs.push(
+                  { id: 'agency', label: 'Agency Leaderboard' },
+                  { id: 'benchmarks', label: 'Sector Benchmarks' },
+                  { id: 'risk', label: 'AI Risk Prediction' },
+                  { id: 'alerts', label: 'Alerts & Actions' }
+                );
+              }
+
+              return tabs.map(tab => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all duration-200 whitespace-nowrap ${
+                      isActive
+                        ? "bg-gradient-to-r from-slate-900 to-indigo-950 text-white shadow-md shadow-indigo-950/20"
+                        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80"
+                    }`}
+                  >
+                    <span className={isActive ? "text-indigo-300" : "text-slate-400"}>
+                      {getTabIcon(tab.id)}
+                    </span>
+                    {tab.label}
+                  </button>
+                );
+              });
+            })()}
+          </div>
         </div>
-      </div>
 
-      {/* Tab Navigation */}
-        <div className="flex gap-1 border-b border-slate-200 mb-6 md:mb-8 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {(() => {
-             const tabs = [];
-             if (!currentUser) {
-                 tabs.push({ id: 'dashboard', label: 'Overview' }, { id: 'complaints', label: 'Complaints' });
-             } else if (currentUser.role === 'admin') {
-                 // Central Admin
-                 tabs.push(
-                     { id: 'dashboard', label: 'Participatory Priority Engine (Dashboard)' },
-                     { id: 'gatekeeper', label: 'PDF Gatekeeper (Investment Parity)' },
-                       { id: 'accounts', label: 'Accounts (Platform Provisioning)' }
-                 );
-             } else if (currentUser.role === 'state_admin') {
-                 // State Admin
-                 tabs.push(
-                     { id: 'dashboard', label: 'State Priority Engine' },
-                     { id: 'hotspots', label: 'Hotspots' },
-                     { id: 'inspectors', label: 'Inspectors' },
-                     { id: 'proposals', label: 'Bidding / Proposals' },
-                     { id: 'accounts', label: 'Accounts (Ministries)' }
-                 );
-             } else if (currentUser.role === 'ministry') {
-                 tabs.push(
-                     { id: 'dashboard', label: 'Dashboard' },
-                     { id: 'hotspots', label: 'Field Reports' },
-                     { id: 'proposals', label: 'Proposals' },
-                     { id: 'complaints', label: 'Complaints' }
-                 );
-             } else if (currentUser.role === 'agency') {
-                 tabs.push(
-                     { id: 'dashboard', label: 'Dashboard' },
-                     { id: 'proposals', label: 'Bidding' },
-                     { id: 'my-projects', label: 'My Projects' },
-                     { id: 'complaints', label: 'Complaints' }
-                 );
-             }
-             
-               // Add analytics tabs for everyone except unauthenticated
-               if (currentUser) {
-                   tabs.push(
-                       { id: 'agency', label: 'Agency Leaderboard' },
-                       { id: 'benchmarks', label: 'Benchmarks' },
-                       { id: 'risk', label: 'Risk Prediction' },
-                       { id: 'alerts', label: 'Alerts & Actions' }
-                   );
-               }
-
-               return tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-2 sm:px-4 sm:py-2 font-semibold text-sm transition-colors whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? "border-b-2 border-slate-900 text-slate-900"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  {tab.label}
-                </button>
-             ));
-          })()}
-        </div>
-
-      {/* ── Tab Content ── */}
-      {activeTab === "dashboard" && (
-        <div className="space-y-8">
-          
-          {/* Filters Row */}
-            <div className="flex flex-wrap gap-4 p-4 bg-white border border-slate-200 rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-              <div className="flex flex-col gap-1 w-full md:w-auto flex-1 min-w-[200px]">
-                <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">State / UT (India)</label>
-                <select 
-                  className="bg-slate-50 border border-slate-300 text-slate-700 p-2 text-sm font-mono focus:border-emerald-500 outline-none"
-                  value={stateFilter || ""}
-                  onChange={(e) => setStateFilter(e.target.value || null)}
-                >
-                  <option value="">All States / UTs (India)</option>
-                  {uniqueStates.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-
-            <div className="flex flex-col gap-1 w-full md:w-auto flex-1 min-w-[200px]">
-              <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Sector</label>
-              <select 
-                className="bg-slate-50 border border-slate-300 text-slate-700 p-2 text-sm font-mono focus:border-emerald-500 outline-none"
-                value={sectorFilter || ""}
-                onChange={(e) => setSectorFilter(e.target.value || null)}
-              >
-                <option value="">All Sectors</option>
-                {uniqueSectors.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            {currentUser?.role !== "ministry" && (
-  <div className="flex flex-col gap-1 w-full md:w-auto flex-1 min-w-[200px]">
-              <label className="text-[10px] font-mono text-slate-500 uppercase tracking-widest">Ministry / Department</label>
-              <select 
-                className="bg-slate-50 border border-slate-300 text-slate-700 p-2 text-sm font-mono focus:border-emerald-500 outline-none"
-                value={ministryFilter || ""}
-                onChange={(e) => setMinistryFilter(e.target.value || null)}
-              >
-                <option value="">All Ministries</option>
-                {uniqueMinistries.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </div>
-)}
-            {(stateFilter || sectorFilter || ministryFilter) && (
-              <div className="flex items-end">
-                <button 
-                  onClick={() => { setStateFilter(null); setSectorFilter(null); setMinistryFilter(null); }}
-                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 p-2 text-sm font-mono h-[38px] px-4 transition-colors"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <Card className="bg-sky-100 text-sky-950 border-none shadow-sm">
-              <CardHeader className="pb-2"><CardTitle className="text-sm font-bold uppercase">Project Count (in no.)</CardTitle></CardHeader>
-              <CardContent><div className="text-4xl font-black">{totalProjects}</div></CardContent>
-            </Card>
-            <Card className="bg-amber-100 text-amber-950 border-none shadow-sm">
-              <CardHeader className="pb-2"><CardTitle className="text-sm font-bold uppercase">Original Approved Cost (in cr.)</CardTitle></CardHeader>
-              <CardContent><div className="text-4xl font-black">{"\u20B9"}{formatNumber(totalOriginalCost)}</div></CardContent>
-            </Card>
-            <Card className="bg-rose-100 text-rose-950 border-none shadow-sm">
-              <CardHeader className="pb-2"><CardTitle className="text-sm font-bold uppercase">Latest Revised Cost (in cr.)</CardTitle></CardHeader>
-              <CardContent><div className="text-4xl font-black">{"\u20B9"}{formatNumber(totalRevisedCost)}</div></CardContent>
-            </Card>
-            <Card className="bg-lime-100 text-lime-950 border-none shadow-sm">
-              <CardHeader className="pb-2"><CardTitle className="text-sm font-bold uppercase">Cumulative Expenditure (in cr.)</CardTitle></CardHeader>
-              <CardContent><div className="text-4xl font-black">{"\u20B9"}{formatNumber(totalExpenditure)}</div></CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="bg-white border-slate-200 rounded-none border-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-              <CardHeader><CardTitle className="font-mono uppercase tracking-wide border-b border-slate-200 pb-2 text-slate-900">Sector-wise Distribution</CardTitle></CardHeader>
-              <CardContent className="pt-6"><SectorDistributionChart data={chartData} /></CardContent>
-            </Card>
-            <Card className="bg-white border-slate-200 rounded-none border-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-              <CardHeader><CardTitle className="font-mono uppercase tracking-wide border-b border-slate-200 pb-2 text-slate-900">Cost Overview</CardTitle></CardHeader>
-              <CardContent className="pt-6"><CostOverviewChart original={totalOriginalCost} revised={totalRevisedCost} expenditure={totalExpenditure} /></CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="bg-white border-slate-200 rounded-none border-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-              <CardHeader><CardTitle className="font-mono uppercase tracking-wide border-b border-slate-200 pb-2 text-slate-900">Physical Progress [Project Count]</CardTitle></CardHeader>
-              <CardContent className="pt-6"><PhysicalProgressChart data={progressData} /></CardContent>
-            </Card>
-            <Card className="bg-white border-slate-200 rounded-none border-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] flex flex-col">
-              <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-slate-200">
-                <CardTitle className="font-mono uppercase tracking-wide text-slate-900">Geospatial Risk Analysis</CardTitle>
-                {stateFilter && (
-                  <button onClick={() => setStateFilter(null)} className="text-xs font-mono bg-slate-200 hover:bg-slate-300 text-slate-900 px-3 py-1 rounded transition-colors">
-                    View All States (Clear Filter)
+        {/* ── Tab Content ── */}
+        {activeTab === "dashboard" && (
+          <div className="space-y-8">
+            
+            {/* Filter Command Bar */}
+            <div className="p-5 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-sm">
+              <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
+                  <Filter className="w-4 h-4 text-indigo-600" />
+                  Portfolio Filters
+                </div>
+                {(stateFilter || sectorFilter || ministryFilter) && (
+                  <button 
+                    onClick={() => { setStateFilter(null); setSectorFilter(null); setMinistryFilter(null); }}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100/80 px-3 py-1 rounded-lg transition"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    Reset All Filters
                   </button>
                 )}
-              </CardHeader>
-              <CardContent className="pt-6 flex-1 flex flex-col">
-                <Suspense fallback={<div className="h-[300px] md:h-[400px] flex items-center justify-center text-slate-500 font-mono">Loading Map...</div>}>
-                  <StateRiskMap country="India" projects={allProjects} selectedState={stateFilter || undefined} onStateSelect={(s) => setStateFilter(s === stateFilter ? null : s)} />
-                </Suspense>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
 
-          <Card className="bg-white border-slate-200 rounded-none border-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] overflow-hidden">
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
-                <CardTitle className="font-mono uppercase tracking-wide text-slate-900">Project Database</CardTitle>
-                <div className="relative w-full sm:w-72">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* State Filter */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-blue-500" />
+                    State / UT (India)
+                  </label>
+                  <select 
+                    className="bg-slate-50/80 border border-slate-200 text-slate-800 p-2.5 rounded-xl text-sm font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                    value={stateFilter || ""}
+                    onChange={(e) => setStateFilter(e.target.value || null)}
+                  >
+                    <option value="">All States / UTs ({uniqueStates.length})</option>
+                    {uniqueStates.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+
+                {/* Sector Filter */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Compass className="w-3.5 h-3.5 text-emerald-500" />
+                    Sector (HML Category)
+                  </label>
+                  <select 
+                    className="bg-slate-50/80 border border-slate-200 text-slate-800 p-2.5 rounded-xl text-sm font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                    value={sectorFilter || ""}
+                    onChange={(e) => setSectorFilter(e.target.value || null)}
+                  >
+                    <option value="">All Sectors ({uniqueSectors.length})</option>
+                    {uniqueSectors.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+
+                {/* Ministry Filter */}
+                {currentUser?.role !== "ministry" && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-amber-500" />
+                      Ministry / Department
+                    </label>
+                    <select 
+                      className="bg-slate-50/80 border border-slate-200 text-slate-800 p-2.5 rounded-xl text-sm font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
+                      value={ministryFilter || ""}
+                      onChange={(e) => setMinistryFilter(e.target.value || null)}
+                    >
+                      <option value="">All Ministries ({uniqueMinistries.length})</option>
+                      {uniqueMinistries.map(m => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 4 Executive KPI Metric Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {/* Card 1: Project Count */}
+              <div className="glass-card glass-card-hover rounded-2xl p-5 border-blue-200/60 bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-white flex flex-col justify-between">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-blue-700">Active Portfolio</p>
+                    <p className="text-3xl sm:text-4xl font-black text-slate-900 mt-1 tracking-tight">{totalProjects}</p>
+                  </div>
+                  <div className="w-11 h-11 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/30">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-blue-100 flex items-center justify-between text-xs font-semibold text-blue-700">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    Monitored Projects
+                  </span>
+                  <span className="bg-blue-100/80 text-blue-800 px-2 py-0.5 rounded-md text-[10px] font-mono">100% OCMS</span>
+                </div>
+              </div>
+
+              {/* Card 2: Original Approved Cost */}
+              <div className="glass-card glass-card-hover rounded-2xl p-5 border-emerald-200/60 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-white flex flex-col justify-between">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Approved Budget</p>
+                    <p className="text-3xl sm:text-4xl font-black text-slate-900 mt-1 tracking-tight">
+                      ₹{formatNumber(totalOriginalCost)} <span className="text-base font-semibold text-slate-500">Cr</span>
+                    </p>
+                  </div>
+                  <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-500/30">
+                    <Landmark className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-emerald-100 flex items-center justify-between text-xs font-semibold text-emerald-700">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    Original Sanction
+                  </span>
+                  <span className="bg-emerald-100/80 text-emerald-800 px-2 py-0.5 rounded-md text-[10px] font-mono">Baseline</span>
+                </div>
+              </div>
+
+              {/* Card 3: Latest Revised Cost */}
+              <div className="glass-card glass-card-hover rounded-2xl p-5 border-amber-200/60 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-white flex flex-col justify-between">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700">Latest Revised Cost</p>
+                    <p className="text-3xl sm:text-4xl font-black text-slate-900 mt-1 tracking-tight">
+                      ₹{formatNumber(totalRevisedCost)} <span className="text-base font-semibold text-slate-500">Cr</span>
+                    </p>
+                  </div>
+                  <div className="w-11 h-11 rounded-xl bg-amber-600 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-amber-100 flex items-center justify-between text-xs font-semibold text-amber-800">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    Escalation: ₹{formatNumber(Math.max(totalRevisedCost - totalOriginalCost, 0))} Cr
+                  </span>
+                  <span className="bg-amber-100/80 text-amber-900 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold">
+                    +{totalOriginalCost > 0 ? ((Math.max(totalRevisedCost - totalOriginalCost, 0) / totalOriginalCost) * 100).toFixed(1) : 0}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 4: Cumulative Expenditure */}
+              <div className="glass-card glass-card-hover rounded-2xl p-5 border-violet-200/60 bg-gradient-to-br from-violet-500/10 via-purple-500/5 to-white flex flex-col justify-between">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-violet-700">Cumulative Expenditure</p>
+                    <p className="text-3xl sm:text-4xl font-black text-slate-900 mt-1 tracking-tight">
+                      ₹{formatNumber(totalExpenditure)} <span className="text-base font-semibold text-slate-500">Cr</span>
+                    </p>
+                  </div>
+                  <div className="w-11 h-11 rounded-xl bg-violet-600 text-white flex items-center justify-center shadow-md shadow-violet-500/30">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="mt-4 pt-3 border-t border-violet-100 flex items-center justify-between text-xs font-semibold text-violet-700">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-violet-500" />
+                    Expenditure Ratio
+                  </span>
+                  <span className="bg-violet-100/80 text-violet-900 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold">
+                    {totalRevisedCost > 0 ? ((totalExpenditure / totalRevisedCost) * 100).toFixed(1) : 0}% Spent
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Charts Row 1: Sector Distribution & Cost Overview */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden p-5">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+                      Sector-wise Portfolio Distribution
+                    </h2>
+                  </div>
+                  <span className="text-xs font-mono text-slate-400">By Project Count</span>
+                </div>
+                <SectorDistributionChart data={chartData} />
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden p-5">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+                      Financial Comparison Overview
+                    </h2>
+                  </div>
+                  <span className="text-xs font-mono text-slate-400">Values in ₹ Cr</span>
+                </div>
+                <CostOverviewChart original={totalOriginalCost} revised={totalRevisedCost} expenditure={totalExpenditure} />
+              </div>
+            </div>
+
+            {/* Charts Row 2: Physical Progress & Geospatial Risk Map */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden p-5">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+                      Physical Progress Distribution
+                    </h2>
+                  </div>
+                  <span className="text-xs font-mono text-slate-400">Completion Brackets</span>
+                </div>
+                <PhysicalProgressChart data={progressData} />
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden p-5 flex flex-col">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+                      Geospatial Risk & Density Analysis
+                    </h2>
+                  </div>
+                  {stateFilter && (
+                    <button 
+                      onClick={() => setStateFilter(null)} 
+                      className="text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 px-3 py-1 rounded-lg transition"
+                    >
+                      Clear State ({stateFilter})
+                    </button>
+                  )}
+                </div>
+                <div className="flex-1 min-h-[360px]">
+                  <Suspense fallback={<div className="h-[360px] flex items-center justify-center text-slate-500 font-mono text-xs">Loading State GeoJSON...</div>}>
+                    <StateRiskMap country="India" projects={allProjects} selectedState={stateFilter || undefined} onStateSelect={(s) => setStateFilter(s === stateFilter ? null : s)} />
+                  </Suspense>
+                </div>
+              </div>
+            </div>
+
+            {/* Project Database Card */}
+            <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 border-b border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
+                    <Layers className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900">Project Master Directory</h2>
+                    <p className="text-xs text-slate-500">Showing {searchedProjects.length} matching ongoing infrastructure projects</p>
+                  </div>
+                </div>
+
+                <div className="relative w-full sm:w-80">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
-                    placeholder="Search name or code..."
+                    placeholder="Search name, code, sector..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 text-slate-700 px-3 py-2 text-sm font-mono focus:border-emerald-500 outline-none"
+                    className="w-full bg-slate-50/80 border border-slate-200 text-slate-800 pl-9 pr-3 py-2 rounded-xl text-xs sm:text-sm font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
                   />
+                  {searchQuery && (
+                    <button 
+                      onClick={() => setSearchQuery("")} 
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-              </CardHeader>
-              <CardContent className="p-0"><ProjectTableAI projects={searchedProjects} currentUser={currentUser} /></CardContent>
-          </Card>
-        </div>
-      )}
+              </div>
+              <div className="p-0">
+                <ProjectTableAI projects={searchedProjects} currentUser={currentUser} />
+              </div>
+            </div>
+          </div>
+        )}
 
-      {activeTab === "proposals" && (
-        <div className="space-y-8 p-6">
-          <WorkflowInbox currentUser={currentUser as any} agencyRanks={effectiveAgencyData} />
-          {(currentUser?.role === "agency" || currentUser?.role === "ministry") && (
-            <ProposalForm currentUser={currentUser as any} onSuccess={() => window.location.reload()} />
-          )}
-        </div>
-      )}
-      
+        {/* Tab 2: Proposals */}
+        {activeTab === "proposals" && (
+          <div className="space-y-8 bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-sm">
+            <WorkflowInbox currentUser={currentUser as any} agencyRanks={dynamicAgencyData} />
+            {(currentUser?.role === "agency" || currentUser?.role === "ministry") && (
+              <ProposalForm currentUser={currentUser as any} onSuccess={() => window.location.reload()} />
+            )}
+          </div>
+        )}
 
-      {activeTab === "complaints" && (
-        <div className="p-6 bg-slate-50 border border-slate-200 shadow-sm">
-          <ViewComplaints />
-        </div>
-      )}
+        {/* Tab 3: Complaints */}
+        {activeTab === "complaints" && (
+          <div className="p-6 sm:p-8 bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-sm">
+            <ViewComplaints />
+          </div>
+        )}
 
-      {activeTab === "hotspots" && (currentUser?.role === "state_admin" || currentUser?.role === "ministry") ? (
-        <AdminHotspots currentUser={currentUser} />
-      ) : activeTab === "inspectors" && currentUser?.role === "state_admin" ? (
-        <AdminInspectors currentUser={currentUser} />
-      ) : activeTab === "accounts" && (currentUser?.role === "admin" || currentUser?.role === "state_admin") ? (
-        <AdminAccountManager currentUser={currentUser} />
-      ) : activeTab === "my-projects" && currentUser?.role === "agency" ? (
-        <AgencyProjectManager projects={allProjects.filter((p: any) => p.agency === currentUser?.agency && !p.is_completed)} agency={currentUser?.agency!} />
-      ) : activeTab === "gatekeeper" ? (
-        <InvestmentParity projects={filteredProjects} />
-      ) : activeTab !== "dashboard" && activeTab !== "proposals" && activeTab !== "complaints" && activeTab !== "hotspots" && activeTab !== "inspectors" && activeTab !== "gatekeeper" && (
-        <AnalyticsTabs
-          activeTab={activeTab}
-          agencyData={effectiveAgencyData}
-          projects={benchmarkProjects}
-          benchmarks={benchResData}
-          alerts={alertsData}
-        />
-      )}
+        {/* Other Tabs */}
+        {activeTab === "hotspots" && (currentUser?.role === "state_admin" || currentUser?.role === "ministry") ? (
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-sm p-6">
+            <AdminHotspots currentUser={currentUser} />
+          </div>
+        ) : activeTab === "inspectors" && currentUser?.role === "state_admin" ? (
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-sm p-6">
+            <AdminInspectors currentUser={currentUser} />
+          </div>
+        ) : activeTab === "accounts" && (currentUser?.role === "admin" || currentUser?.role === "state_admin") ? (
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-sm p-6">
+            <AdminAccountManager currentUser={currentUser} />
+          </div>
+        ) : activeTab === "my-projects" && currentUser?.role === "agency" ? (
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-sm p-6">
+            <AgencyProjectManager projects={allProjects.filter((p: any) => p.agency === currentUser?.agency && !p.is_completed)} agency={currentUser?.agency!} />
+          </div>
+        ) : activeTab === "gatekeeper" ? (
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-sm p-6">
+            <InvestmentParity projects={filteredProjects} />
+          </div>
+        ) : activeTab !== "dashboard" && activeTab !== "proposals" && activeTab !== "complaints" && activeTab !== "hotspots" && activeTab !== "inspectors" && activeTab !== "gatekeeper" && (
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-sm p-6">
+            <AnalyticsTabs
+              activeTab={activeTab}
+              agencyData={dynamicAgencyData}
+              projects={benchmarkProjects}
+              benchmarks={benchResData}
+              alerts={alertsData}
+            />
+          </div>
+        )}
+
+      </div>
     </div>
   );
 }

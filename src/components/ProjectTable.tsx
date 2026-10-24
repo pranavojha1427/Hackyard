@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import { Sparkles, ShieldAlert } from "lucide-react"
 
 export function ProjectTable({ projects }: { projects: any[] }) {
   const [selectedProject, setSelectedProject] = useState<any | null>(null)
@@ -86,70 +87,166 @@ export function ProjectTable({ projects }: { projects: any[] }) {
       </Table>
 
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="bg-slate-50 border-l-2 border-slate-300 text-slate-900 overflow-y-auto sm:max-w-md w-full font-sans">
-          <SheetHeader className="border-b border-slate-200 pb-4 mb-4">
-            <SheetTitle className="text-xl font-bold uppercase tracking-wide text-slate-900">Explainable AI Risk Report</SheetTitle>
-            <SheetDescription className="font-mono text-slate-600 text-xs uppercase">
-              {selectedProject?.project_code} — AI Analysis
-            </SheetDescription>
+        <SheetContent className="bg-white border-l border-slate-200 text-slate-900 overflow-y-auto sm:max-w-lg w-full font-sans shadow-2xl p-6 sm:p-7">
+          <SheetHeader className="border-b border-slate-100 pb-5 mb-5">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                Explainable AI Diagnostics
+              </span>
+            </div>
+            <SheetTitle className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+              Project Risk & Health Report
+            </SheetTitle>
+            {selectedProject && (
+              <div className="mt-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs font-bold bg-slate-900 text-white px-2.5 py-0.5 rounded-md">
+                    {selectedProject.project_code}
+                  </span>
+                  <span className="text-xs font-semibold text-slate-500">
+                    {selectedProject.sector}
+                  </span>
+                </div>
+                <p className="text-sm font-bold text-slate-900 mt-2 line-clamp-2 leading-snug">
+                  {selectedProject.project_name}
+                </p>
+              </div>
+            )}
           </SheetHeader>
           
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-10 space-y-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-100"></div>
-              <p className="font-mono text-sm text-slate-600 animate-pulse uppercase">Computing SHAP values...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              <p className="font-mono text-xs text-slate-600 animate-pulse uppercase">Computing SHAP values...</p>
             </div>
           ) : riskData ? (
             <div className="space-y-6">
-              <div className="space-y-2">
-                <h3 className="font-mono text-xs text-slate-500 uppercase tracking-widest border-b border-slate-200 pb-1">Overall Health</h3>
-                <div className="flex items-center space-x-2 pt-1">
-                  <Badge className={`rounded-none font-mono text-sm px-3 py-1 uppercase ${riskData.overall_health === 'Critical' ? 'bg-red-900 text-red-100 border border-red-700 hover:bg-red-900' : riskData.overall_health === 'At Risk' ? 'bg-amber-900 text-amber-100 border border-amber-700 hover:bg-amber-900' : 'bg-emerald-900 text-emerald-100 border border-emerald-700 hover:bg-emerald-900'}`}>
-                    {riskData.overall_health}
-                  </Badge>
+              
+              {/* Overall Health Status */}
+              <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 sm:p-5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Overall Health Status
+                  </span>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                    riskData.overall_health === 'Critical' 
+                      ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                      : riskData.overall_health === 'At Risk' 
+                        ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${riskData.overall_health === 'Critical' ? 'bg-rose-500 animate-pulse' : riskData.overall_health === 'At Risk' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+                    {riskData.overall_health.toUpperCase()}
+                  </span>
                 </div>
+                <p className="text-xs text-slate-600 font-medium">
+                  Multi-factor governance diagnosis based on schedule variances and budget execution.
+                </p>
               </div>
 
-              <div className="space-y-2">
-                <h3 className="font-mono text-xs text-slate-500 uppercase tracking-widest border-b border-slate-200 pb-1">AI Recommendation</h3>
-                <p className="text-sm bg-white border border-slate-200 p-3 font-medium text-slate-700">
+              {/* AI Recommendation */}
+              <div className="bg-gradient-to-br from-indigo-50/80 via-blue-50/50 to-white border border-indigo-200 rounded-2xl p-5 shadow-xs">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <h3 className="font-bold text-xs uppercase tracking-wider text-indigo-950">
+                    AI Executive Recommendation
+                  </h3>
+                </div>
+                <p className="text-sm font-normal text-slate-800 leading-relaxed text-left">
                   {riskData.recommendation}
                 </p>
               </div>
 
-              {riskData.overall_health === 'Critical' && riskData.SHAP_Explanation && riskData.SHAP_Explanation.length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="font-mono text-xs text-red-500 uppercase tracking-widest border-b border-slate-200 pb-1">Critical Risk Factors (SHAP)</h3>
-                  <div className="bg-white border border-slate-200 p-0">
-                    <Table>
-                      <TableBody>
-                        {riskData.SHAP_Explanation.map((explanation: string, i: number) => {
-                          const parts = explanation.split("->");
-                          return (
-                            <TableRow key={i} className="border-b border-slate-200/50 hover:bg-slate-200/20">
-                              <TableCell className="text-xs text-slate-700 py-3">{parts[0]?.trim()}</TableCell>
-                              <TableCell className="text-xs font-mono text-red-400 py-3 text-right">
-                                {parts[1] ? `-> ${parts[1].trim()}` : ''}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
+              {/* Critical Risk Factors (SHAP) */}
+              {riskData.SHAP_Explanation && riskData.SHAP_Explanation.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <div className="flex items-center gap-2">
+                      <ShieldAlert className="w-4 h-4 text-rose-600" />
+                      <h3 className="font-bold text-xs uppercase tracking-wider text-slate-800">
+                        Critical Risk Drivers (SHAP Analysis)
+                      </h3>
+                    </div>
+                    <span className="text-[11px] font-mono text-slate-400 font-semibold">Impact</span>
+                  </div>
+
+                  <div className="flex flex-col gap-2.5">
+                    {riskData.SHAP_Explanation.map((explanation: string, i: number) => {
+                      const parts = explanation.split("->");
+                      const factorName = parts[0]?.trim();
+                      const impactBadge = parts[1]?.trim();
+                      const isHigh = impactBadge?.toLowerCase().includes("high");
+                      const isMedium = impactBadge?.toLowerCase().includes("medium");
+
+                      return (
+                        <div 
+                          key={i} 
+                          className="bg-white border border-slate-200/90 rounded-xl p-3.5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:border-slate-300 transition"
+                        >
+                          <span className="text-xs font-semibold text-slate-800 flex items-center gap-2 leading-snug">
+                            <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                            {factorName}
+                          </span>
+                          {impactBadge && (
+                            <span className={`text-xs font-bold px-3 py-1 rounded-lg border whitespace-nowrap text-center shrink-0 ${
+                              isHigh 
+                                ? "bg-rose-100 text-rose-800 border-rose-200" 
+                                : isMedium 
+                                  ? "bg-amber-100 text-amber-800 border-amber-200" 
+                                  : "bg-blue-100 text-blue-800 border-blue-200"
+                            }`}>
+                              {impactBadge}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200">
-                <div className="bg-white p-3 border border-slate-200">
-                  <p className="text-[10px] font-mono text-slate-500 uppercase">Cost Overrun Score</p>
-                  <p className="text-2xl font-black text-slate-900">{riskData.cost_overrun_score}</p>
+              {/* Risk Scores with Visual Meters */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between">
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Cost Overrun Score
+                  </p>
+                  <div className="flex items-baseline gap-1 mt-2">
+                    <span className="text-3xl font-black text-slate-900">{riskData.cost_overrun_score}</span>
+                    <span className="text-xs text-slate-400 font-bold">/ 100</span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mt-3">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        Number(riskData.cost_overrun_score) > 50 ? 'bg-rose-500' : Number(riskData.cost_overrun_score) > 20 ? 'bg-amber-500' : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${Math.min(Number(riskData.cost_overrun_score) || 0, 100)}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="bg-white p-3 border border-slate-200">
-                  <p className="text-[10px] font-mono text-slate-500 uppercase">Schedule Risk Score</p>
-                  <p className="text-2xl font-black text-slate-900">{riskData.schedule_risk_score}</p>
+
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col justify-between">
+                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Schedule Delay Score
+                  </p>
+                  <div className="flex items-baseline gap-1 mt-2">
+                    <span className="text-3xl font-black text-slate-900">{riskData.schedule_risk_score}</span>
+                    <span className="text-xs text-slate-400 font-bold">/ 100</span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden mt-3">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        Number(riskData.schedule_risk_score) > 60 ? 'bg-rose-500' : Number(riskData.schedule_risk_score) > 30 ? 'bg-amber-500' : 'bg-emerald-500'
+                      }`}
+                      style={{ width: `${Math.min(Number(riskData.schedule_risk_score) || 0, 100)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
+
             </div>
           ) : (
             <div className="text-center py-10 font-mono text-slate-500 text-sm">

@@ -147,6 +147,7 @@ Provide deep intelligence based solely on the provided project context.`;
       console.error("Gemini API Error:", res.status, errText);
       throw new Error(`Gemini API error: ${res.status}`);
     }
+
     const data = await res.json();
     let responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response received.";
     

@@ -10,16 +10,7 @@ export function WorkflowInbox({ currentUser, agencyRanks }: any) {
   const [projectCodes, setProjectCodes] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState(currentUser.role === "agency" ? "all" : "inbox");
 
-  const load = () => {
-    fetch("/api/proposals")
-      .then(async r => {
-        if (!r.ok) return [];
-        const text = await r.text();
-        return text ? JSON.parse(text) : [];
-      })
-      .then(d => Array.isArray(d) ? setProposals(d) : setProposals([]))
-      .catch(() => setProposals([]));
-  };
+  const load = () => fetch("/api/proposals").then(r => r.json()).then(d => Array.isArray(d) ? setProposals(d) : setProposals([]));
   useEffect(() => { load(); }, []);
 
   const handleAction = async (id: string, action: string) => {

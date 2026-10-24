@@ -9,16 +9,7 @@ export function BiddingBoard({ proposal, currentUser, agencyRanks }: any) {
   const [remarks, setRemarks] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const load = () => {
-    fetch(`/api/bids?proposalId=${proposal._id}`)
-      .then(async r => {
-        if (!r.ok) return [];
-        const text = await r.text();
-        return text ? JSON.parse(text) : [];
-      })
-      .then(d => Array.isArray(d) ? setBids(d) : setBids([]))
-      .catch(() => setBids([]));
-  };
+  const load = () => fetch(`/api/bids?proposalId=${proposal._id}`).then(r => r.json()).then(d => Array.isArray(d) ? setBids(d) : setBids([]));
   useEffect(() => { load(); }, []);
 
   const submit = async () => {

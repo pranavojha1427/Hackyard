@@ -85,127 +85,37 @@ const FALLBACK_USERS = [
     email: "admin@pragatipulse.gov.in",
     active: true,
     name: "System Administrator",
-    passwordHash: "$2b$10$PUVgmAImf08PFzsWoEs/nuJEdBLMf4i6/SGEDvd4/8DGWBWv5lAUS",
-    role: "admin",
-    country: "India"
-  },
-  {
-    _id: "6abccbbd35139a39f89e0e1b",
-    name: "Pranav Ojha",
-    email: "indiawb@pragatipulse.gov.in",
-    passwordHash: "$2b$10$Spyk5oNVnJXTG4gGQNq50OCurMwGEIH0zEiXqDSo0nbv4QtsAsW/C",
-    role: "state_admin",
-    state: "West Bengal",
-    country: "India",
-    active: true
-  },
-  {
-    _id: "6ab806cc688034025bc425ab",
-    name: "Pranav Ojha",
-    email: "adminwb@pragatipulse.gov.in",
-    role: "state_admin",
-    state: "West Bengal",
-    country: "India",
-    active: true,
-    passwordHash: "$2b$10$PUVgmAImf08PFzsWoEs/nuJEdBLMf4i6/SGEDvd4/8DGWBWv5lAUS"
+    passwordHash: "$2b$12$Y41PefsHj.MXVZWvSnvJmOa2J4L1qxzojAHsvdgV0Lvwr8sZlQOAm",
+    role: "admin"
   },
   {
     _id: "6aa5983066ef873e489e4ab2",
     email: "you3@test.com",
     name: "Shreyan Das",
-    passwordHash: "$2b$10$PUVgmAImf08PFzsWoEs/nuJEdBLMf4i6/SGEDvd4/8DGWBWv5lAUS",
+    passwordHash: "$2b$12$nH6Xga9zbgBKzZ4CJv80K.bCVnOuZ3tZNYfb.3P17qITq69gkDdAm",
     role: "ministry",
     ministry: "Department of Sports",
-    state: "West Bengal",
-    country: "India",
     active: true
   },
   {
     _id: "6aa5bb06e484819eb160837f",
     email: "agency@pragatipulse.gov.in",
     name: "Samrat",
-    passwordHash: "$2b$10$PUVgmAImf08PFzsWoEs/nuJEdBLMf4i6/SGEDvd4/8DGWBWv5lAUS",
+    passwordHash: "$2b$12$Xjun7cGy43MlK1cLejhO.uu1gmIDNHnEpKJYk00CYycRK3Jx/CsHi",
     role: "agency",
     agency: "Samrat Agency",
-    country: "India",
     active: true
   },
   {
     _id: "6aa5983066ef873e489e4ab5",
     email: "you5@pragatipulse.gov.in",
     name: "Prabhat Singh",
-    passwordHash: "$2b$10$PUVgmAImf08PFzsWoEs/nuJEdBLMf4i6/SGEDvd4/8DGWBWv5lAUS",
+    passwordHash: "$2b$12$nH6Xga9zbgBKzZ4CJv80K.bCVnOuZ3tZNYfb.3P17qITq69gkDdAm",
     role: "ministry",
-    ministry: "Ministry of Road Transport & Highways",
-    state: "West Bengal",
-    country: "India",
+    ministry: "Ministry of New and Renewable Energy",
     active: true
-  },
-  {
-    _id: "6ab7828f15ed9f610af0f296",
-    name: "Pranav Ojha",
-    email: "coal@pragatipulse.gov.in",
-    passwordHash: "$2b$10$PUVgmAImf08PFzsWoEs/nuJEdBLMf4i6/SGEDvd4/8DGWBWv5lAUS",
-    role: "ministry",
-    ministry: "Ministry of Coal",
-    state: "West Bengal",
-    country: "India",
-    active: true
-  },
-  {
-    _id: "6abd0cb00dc1d8d4969757e8",
-    name: "Shrabasti Ghosh",
-    email: "road@pragatipulse.gov.in",
-    passwordHash: "$2b$10$Oj1HvTJrMiWV4qShZ1dFZ.b9ujpenkXn/wIFdTlxn5tDPztl0Uif.",
-    role: "ministry",
-    ministry: "Ministry of Road Transport & Highways",
-    state: "West Bengal",
-    country: "India",
-    active: true
-  },
-  {
-    _id: "6aa64805003969a20a1acb13",
-    name: "Arman Khan",
-    email: "you6@pragatipulse.gov.in",
-    passwordHash: "$2b$10$PUVgmAImf08PFzsWoEs/nuJEdBLMf4i6/SGEDvd4/8DGWBWv5lAUS",
-    role: "agency",
-    agency: "Maqsad",
-    country: "India",
-    active: true
-  },
-  {
-    _id: "6aa59a8666ef873e489e4ab3",
-    name: "Shrabasti Ghosh",
-    email: "you4@gmail.com",
-    passwordHash: "$2b$10$PUVgmAImf08PFzsWoEs/nuJEdBLMf4i6/SGEDvd4/8DGWBWv5lAUS",
-    role: "ministry",
-    ministry: "Department for Promotion of Industry & Internal Trade",
-    state: "West Bengal",
-    country: "India",
-    active: true
-  },
-  {
-    _id: "6aa648ac003969a20a1acb14",
-    name: "Shrabasti Ghosh",
-    email: "shrabasti@gmail.com",
-    passwordHash: "$2b$10$PUVgmAImf08PFzsWoEs/nuJEdBLMf4i6/SGEDvd4/8DGWBWv5lAUS",
-    role: "ministry",
-    ministry: "Department of Water Resources, River Development & GR",
-    state: "West Bengal",
-    country: "India",
-    active: true
-  },
-  {
-    _id: "6aba20f30db2d1736a648b3a",
-    name: "Modi jii",
-    email: "india@pragatipulse.gov.in",
-    passwordHash: "$2b$10$8SwGKmRy38uWUKEBTuRyWOodEClgEDS2mpMO.MY7k.KEEY1GASijq",
-    role: "admin",
-    active: true,
-    country: "India"
   }
 ];
-
 
 export async function findUserByEmail(email: string) {
   const normalizedEmail = email.toLowerCase().trim();

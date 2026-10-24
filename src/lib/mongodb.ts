@@ -1,9 +1,9 @@
 import { MongoClient } from "mongodb";
 
-const uri = process.env.MONGODB_URI || "";
+const uri = process.env.MONGODB_URI;
 if (!uri) throw new Error("Missing MONGODB_URI environment variable");
 
-const options = { serverSelectionTimeoutMS: 5000, connectTimeoutMS: 5000 };
+const options = { serverSelectionTimeoutMS: 3000, connectTimeoutMS: 3000 };
 
 
 declare global {
@@ -16,13 +16,13 @@ let _cachedPromise: Promise<MongoClient> | null = null;
 export async function getMongoClient(): Promise<MongoClient> {
   if (process.env.NODE_ENV === "development") {
     if (!global._mongoClientPromise) {
-      const client = new MongoClient(uri, options);
+      const client = new MongoClient(uri!, options);
       global._mongoClientPromise = client.connect();
     }
     return global._mongoClientPromise;
   }
   if (!_cachedPromise) {
-    const client = new MongoClient(uri, options);
+    const client = new MongoClient(uri!, options);
     _cachedPromise = client.connect();
   }
   return _cachedPromise;

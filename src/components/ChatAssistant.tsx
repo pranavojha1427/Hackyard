@@ -87,10 +87,11 @@ export default function ChatAssistant() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 p-4 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition-colors z-50 flex items-center justify-center"
+          className="fixed bottom-6 right-6 p-4 bg-gradient-to-tr from-indigo-600 via-blue-600 to-indigo-900 text-white rounded-2xl shadow-xl shadow-indigo-600/30 hover:shadow-indigo-600/50 hover:scale-105 active:scale-95 ring-4 ring-indigo-200/50 transition-all duration-200 z-50 flex items-center gap-2 group"
           aria-label="Open Project Intelligence Assistant"
         >
-          <MessageCircle size={28} />
+          <Bot className="w-6 h-6 animate-pulse" />
+          <span className="hidden sm:inline font-bold text-xs uppercase tracking-wider pr-1">MoSPI AI</span>
         </button>
       )}
 
@@ -99,31 +100,42 @@ export default function ChatAssistant() {
         <>
         <style>{`
           @keyframes macOpen {
-            0% { opacity: 0; transform: scale(0.85) translateY(20px); transform-origin: bottom right; }
+            0% { opacity: 0; transform: scale(0.9) translateY(20px); transform-origin: bottom right; }
             100% { opacity: 1; transform: scale(1) translateY(0); transform-origin: bottom right; }
           }
         `}</style>
         <div 
-          className="fixed bottom-6 right-6 w-[750px] max-w-[95vw] h-[800px] max-h-[85vh] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200 overflow-hidden"
-          style={{ animation: 'macOpen 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
+          className="fixed bottom-6 right-6 w-[750px] max-w-[95vw] h-[780px] max-h-[85vh] bg-white rounded-3xl shadow-2xl flex flex-col z-50 border border-slate-200 overflow-hidden ring-1 ring-slate-900/10"
+          style={{ animation: 'macOpen 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
         >
           {/* Header */}
-          <div className="bg-blue-600 text-white p-4 flex justify-between items-center shrink-0">
-            <div className="flex items-center gap-2">
-              <Bot size={24} />
-              <h3 className="font-semibold text-lg">MoSPI Intelligence</h3>
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white p-5 flex justify-between items-center shrink-0 border-b border-indigo-900/40">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-blue-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/30">
+                <Bot className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-base tracking-tight text-white">MoSPI Intelligence Assistant</h3>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Gemini AI
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300">Natural language portfolio analytics & query resolution</p>
+              </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-blue-100 hover:text-white transition-colors"
+              className="w-8 h-8 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition flex items-center justify-center"
               aria-label="Close"
             >
-              <X size={24} />
+              <X size={18} />
             </button>
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+          <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-slate-50/70">
             {messages.map((msg, idx) => (
               <div
                 key={idx}
@@ -132,35 +144,37 @@ export default function ChatAssistant() {
                 }`}
               >
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                    msg.role === "user" ? "bg-gray-300" : "bg-blue-100 text-blue-600"
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                    msg.role === "user" 
+                      ? "bg-slate-900 text-white shadow-sm" 
+                      : "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20"
                   }`}
                 >
-                  {msg.role === "user" ? <User size={18} /> : <Bot size={18} />}
+                  {msg.role === "user" ? <User size={16} /> : <Bot size={16} />}
                 </div>
                 <div
-                  className={`max-w-[80%] rounded-2xl p-3 ${
+                  className={`max-w-[85%] rounded-2xl p-4 ${
                     msg.role === "user"
-                      ? "bg-blue-600 text-white rounded-tr-none"
-                      : "bg-white border border-gray-200 text-gray-800 rounded-tl-none shadow-sm prose prose-sm max-w-none"
+                      ? "bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-tr-xs shadow-md shadow-indigo-500/20"
+                      : "bg-white border border-slate-200 text-slate-800 rounded-tl-xs shadow-sm prose prose-sm max-w-none"
                   }`}
                 >
                   {msg.role === "user" ? (
-                    <p className="whitespace-pre-wrap m-0">{msg.content}</p>
+                    <p className="whitespace-pre-wrap m-0 text-sm font-medium">{msg.content}</p>
                   ) : (
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}
                       components={{
                         table: ({ node, ...props }) => (
-                          <div className="overflow-x-auto my-3 rounded border border-gray-200">
-                            <table className="w-full border-collapse text-sm" {...props} />
+                          <div className="overflow-x-auto my-3 rounded-xl border border-slate-200 shadow-xs">
+                            <table className="w-full border-collapse text-xs" {...props} />
                           </div>
                         ),
-                        thead: ({ node, ...props }) => <thead className="bg-gray-100 text-gray-800 font-mono" {...props} />,
-                        tbody: ({ node, ...props }) => <tbody className="divide-y divide-gray-200" {...props} />,
-                        tr: ({ node, ...props }) => <tr className="hover:bg-gray-50 transition-colors" {...props} />,
-                        th: ({ node, ...props }) => <th className="p-2 text-left font-semibold border-b border-gray-200" {...props} />,
-                        td: ({ node, ...props }) => <td className="p-2 text-gray-700" {...props} />,
+                        thead: ({ node, ...props }) => <thead className="bg-slate-100 text-slate-800 font-mono text-[11px] uppercase tracking-wider" {...props} />,
+                        tbody: ({ node, ...props }) => <tbody className="divide-y divide-slate-100 bg-white" {...props} />,
+                        tr: ({ node, ...props }) => <tr className="hover:bg-slate-50 transition-colors" {...props} />,
+                        th: ({ node, ...props }) => <th className="p-2.5 text-left font-bold border-b border-slate-200" {...props} />,
+                        td: ({ node, ...props }) => <td className="p-2.5 text-slate-700" {...props} />,
                       }}
                     >
                       {msg.content}
@@ -170,12 +184,13 @@ export default function ChatAssistant() {
               </div>
             ))}
             {isLoading && (
-              <div className="flex gap-3 flex-row">
-                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
-                  <Bot size={18} />
+              <div className="flex gap-3 flex-row items-center">
+                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-indigo-500/20">
+                  <Bot size={16} />
                 </div>
-                <div className="max-w-[80%] rounded-2xl p-4 bg-white border border-gray-200 rounded-tl-none shadow-sm">
-                  <Loader2 className="animate-spin text-blue-600" size={20} />
+                <div className="rounded-2xl px-4 py-3 bg-white border border-slate-200 rounded-tl-xs shadow-sm flex items-center gap-2 text-xs text-slate-500">
+                  <Loader2 className="animate-spin text-indigo-600" size={16} />
+                  Analyzing MoSPI project data...
                 </div>
               </div>
             )}
@@ -183,7 +198,7 @@ export default function ChatAssistant() {
           </div>
 
           {/* Input Area */}
-          <div className="p-4 bg-white border-t border-gray-200 shrink-0">
+          <div className="p-4 bg-white border-t border-slate-200 shrink-0">
             {/* Prompt Chips */}
             <div className="flex flex-wrap gap-2 mb-3">
               {PREPOPULATED_PROMPTS.map((prompt, idx) => (
@@ -191,7 +206,7 @@ export default function ChatAssistant() {
                   key={idx}
                   onClick={() => sendMessage(prompt)}
                   disabled={isLoading}
-                  className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 py-1.5 px-3 rounded-full transition-colors text-left disabled:opacity-50"
+                  className="text-xs bg-indigo-50/70 hover:bg-indigo-100/90 text-indigo-800 py-1.5 px-3 rounded-xl border border-indigo-200/60 transition text-left disabled:opacity-50 font-medium"
                 >
                   {prompt}
                 </button>
@@ -199,22 +214,22 @@ export default function ChatAssistant() {
             </div>
 
             {/* Input Field */}
-            <div className="flex gap-2 items-center bg-gray-50 border border-gray-300 rounded-full p-1 pl-4 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all">
+            <div className="flex gap-2 items-center bg-slate-50 border border-slate-200 rounded-2xl p-1.5 pl-4 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:bg-white focus-within:border-transparent transition">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="Ask about project intelligence..."
-                className="flex-1 bg-transparent border-none outline-none text-sm py-2"
+                placeholder="Ask about project delays, expenditures, state budgets..."
+                className="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm text-slate-800 py-2"
                 disabled={isLoading}
               />
               <button
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || isLoading}
-                className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                className="p-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white rounded-xl hover:from-indigo-700 hover:to-blue-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition shadow-sm"
               >
-                <Send size={18} />
+                <Send size={16} />
               </button>
             </div>
           </div>

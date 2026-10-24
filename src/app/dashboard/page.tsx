@@ -24,9 +24,15 @@ let cachedBenchmarks: CacheEntry<any[]> | null = null;
 let cachedAlerts: CacheEntry<any[]> | null = null;
 let cachedPortfolioKpi: CacheEntry<any> | null = null;
 let cachedMongoProjects: CacheEntry<any[]> | null = null;
-let cachedOverrides: CacheEntry<any[]> | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const SHORT_CACHE_TTL_MS = 60 * 1000; // 1 minute
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))
+  ]);
+}
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -46,15 +52,7 @@ export default async function DashboardPage() {
   let benchData: any[] = [];
   let alertsData: any[] = [];
   let mongoAgencyProjects: any[] = [];
-  let overridesData: any[] = [];
   let kpi: any = null;
-
-  function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
-    return Promise.race([
-      promise,
-      new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms))
-    ]);
-  }
 
   try {
     const supabase = await createClient();
@@ -131,22 +129,13 @@ export default async function DashboardPage() {
       mongoPromise = getMongoProjects().catch(() => []);
     }
 
-    // 7. Mongo overrides (cached for 1 minute)
-    let overridesPromise: Promise<any>;
-    if (cachedOverrides && Date.now() - cachedOverrides.timestamp < SHORT_CACHE_TTL_MS) {
-      overridesPromise = Promise.resolve(cachedOverrides.data);
-    } else {
-      overridesPromise = getProjectOverrides().catch(() => []);
-    }
-
-    const [results, agencyRes, benchRes, alertsRes, mongoProjects, kpiRes, fetchedOverrides] = await Promise.all([
+    const [results, agencyRes, benchRes, alertsRes, mongoProjects, kpiRes] = await Promise.all([
       withTimeout(projectPromise, isFiltered ? 1500 : 3500, []),
       withTimeout(agencyPromise, 1500, { data: null, error: null }),
       withTimeout(benchPromise, 1500, { data: null, error: null }),
       withTimeout(alertsPromise, 1500, { data: null, error: null }),
       withTimeout(mongoPromise, 300, []),
       withTimeout(kpiPromise, 1500, { data: null, error: null }),
-      withTimeout(overridesPromise, 300, []),
     ]);
 
     for (const res of results) {
@@ -160,7 +149,6 @@ export default async function DashboardPage() {
     alertsData = alertsRes?.data || [];
     mongoAgencyProjects = mongoProjects || [];
     kpi = kpiRes?.data?.[0] || null;
-    overridesData = fetchedOverrides || [];
 
     // Populate caches if fetched freshly
     if (agencyData.length > 0 && !cachedAgencyRankings) {
@@ -178,9 +166,6 @@ export default async function DashboardPage() {
     if (mongoAgencyProjects.length > 0 && !cachedMongoProjects) {
       cachedMongoProjects = { data: mongoAgencyProjects, timestamp: Date.now() };
     }
-    if (overridesData.length > 0 && !cachedOverrides) {
-      cachedOverrides = { data: overridesData, timestamp: Date.now() };
-    }
     if (allProjectsRaw.length > 0) {
       cachedProjectsMap.set(filterKey, { data: allProjectsRaw, timestamp: Date.now() });
     }
@@ -192,7 +177,7 @@ export default async function DashboardPage() {
   if (allProjectsRaw.length === 0 && mongoAgencyProjects.length === 0) {
     allProjectsRaw = [...FALLBACK_PROJECTS];
   }
-  if (!agencyData || agencyData.length === 0 || agencyData.every((a: any) => a.agency === "Unknown Agency")) {
+  if (agencyData.length === 0) {
     agencyData = [...FALLBACK_AGENCY_RANKINGS];
   }
   if (benchData.length === 0) {
@@ -203,7 +188,11 @@ export default async function DashboardPage() {
   }
 
   const baseProjects = allProjectsRaw;
-  const overrides = overridesData;
+  const overrides = await withTimeout(
+    getProjectOverrides(baseProjects.map((p: any) => p.id)).catch(() => []),
+    400,
+    []
+  );
   
   const allProjects = [
     ...applyProjectOverrides(baseProjects, overrides),
@@ -215,19 +204,12 @@ export default async function DashboardPage() {
   let finalAgencyData = agencyData;
   let finalAlertsData = alertsData;
 
-  if (session && (session.role === "ministry" || session.role === "agency" || session.role === "engineer" || session.role === "state_admin")) {
+  if (session?.role !== "admin") {
     const allowedAgencies = new Set(allProjects.map(p => p.agency).filter(Boolean));
     const allowedProjectIds = new Set(allProjects.map(p => String(p.id)));
 
-    const scoped = finalAgencyData.filter(a => allowedAgencies.has(a.agency));
-    if (scoped.length > 0) {
-      finalAgencyData = scoped;
-    }
+    finalAgencyData = finalAgencyData.filter(a => allowedAgencies.has(a.agency));
     finalAlertsData = finalAlertsData.filter(a => allowedProjectIds.has(String(a.project_id)));
-  }
-
-  if (!finalAgencyData || finalAgencyData.length === 0 || finalAgencyData.every((a: any) => a.agency === "Unknown Agency")) {
-    finalAgencyData = [...FALLBACK_AGENCY_RANKINGS];
   }
 
   return (

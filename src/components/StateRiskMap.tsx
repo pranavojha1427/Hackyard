@@ -106,7 +106,7 @@ export default function StateRiskMap({ projects, selectedState, country = "India
       .then((geojson: FeatureCollection) => {
         let isProjected = false;
         try {
-          let coords = (geojson.features[0].geometry as any)?.coordinates;
+          let coords = (geojson.features[0].geometry as any).coordinates;
           while (Array.isArray(coords[0])) {
             coords = coords[0];
           }
