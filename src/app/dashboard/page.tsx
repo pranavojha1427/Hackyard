@@ -56,18 +56,38 @@ export default async function DashboardPage() {
         .range(page * pageSize, (page + 1) * pageSize - 1)
     );
 
-    const [results, agencyRes, benchRes, alertsRes, mongoProjects, kpiRes] = await withTimeout(
-      Promise.all([
+    const [results, agencyRes, benchRes, alertsRes, mongoProjects, kpiRes] = await Promise.all([
+      withTimeout(
         Promise.all(promises.map(p => Promise.resolve(p).catch(e => ({ data: null, error: e })))).catch(() => []),
+        4500,
+        []
+      ),
+      withTimeout(
         Promise.resolve(supabase.from("agency_performance_rankings").select("*").order("delay_frequency_pct", { ascending: false })).catch(e => ({ data: null, error: e })),
+        3000,
+        { data: null, error: null }
+      ),
+      withTimeout(
         Promise.resolve(supabase.from("sector_benchmarks").select("*")).catch(e => ({ data: null, error: e })),
+        3000,
+        { data: null, error: null }
+      ),
+      withTimeout(
         Promise.resolve(supabase.from("project_alerts").select("*").order("id", { ascending: false })).catch(e => ({ data: null, error: e })),
-        getMongoProjects().catch(e => { console.warn("MongoDB Fetch Error:", e); return []; }),
+        3000,
+        { data: null, error: null }
+      ),
+      withTimeout(
+        getMongoProjects().catch(() => []),
+        1200,
+        []
+      ),
+      withTimeout(
         Promise.resolve(supabase.rpc("get_portfolio_kpis")).catch(e => ({ data: null, error: e })),
-      ]),
-      600,
-      [[], { data: null }, { data: null }, { data: null }, [], { data: null }] as any
-    );
+        3000,
+        { data: null, error: null }
+      ),
+    ]);
 
     for (const res of results) {
       if (res?.data) {
@@ -88,7 +108,7 @@ export default async function DashboardPage() {
   if (allProjectsRaw.length === 0 && mongoAgencyProjects.length === 0) {
     allProjectsRaw = [...FALLBACK_PROJECTS];
   }
-  if (agencyData.length === 0) {
+  if (!agencyData || agencyData.length === 0 || agencyData.every((a: any) => a.agency === "Unknown Agency")) {
     agencyData = [...FALLBACK_AGENCY_RANKINGS];
   }
   if (benchData.length === 0) {
@@ -111,12 +131,19 @@ export default async function DashboardPage() {
   let finalAgencyData = agencyData;
   let finalAlertsData = alertsData;
 
-  if (session?.role !== "admin") {
+  if (session && (session.role === "ministry" || session.role === "agency" || session.role === "engineer" || session.role === "state_admin")) {
     const allowedAgencies = new Set(allProjects.map(p => p.agency).filter(Boolean));
     const allowedProjectIds = new Set(allProjects.map(p => String(p.id)));
 
-    finalAgencyData = finalAgencyData.filter(a => allowedAgencies.has(a.agency));
+    const scoped = finalAgencyData.filter(a => allowedAgencies.has(a.agency));
+    if (scoped.length > 0) {
+      finalAgencyData = scoped;
+    }
     finalAlertsData = finalAlertsData.filter(a => allowedProjectIds.has(String(a.project_id)));
+  }
+
+  if (!finalAgencyData || finalAgencyData.length === 0 || finalAgencyData.every((a: any) => a.agency === "Unknown Agency")) {
+    finalAgencyData = [...FALLBACK_AGENCY_RANKINGS];
   }
 
   return (

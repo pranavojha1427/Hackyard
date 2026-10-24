@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
+import { extractAgency } from "./agency-extractor";
+export { extractAgency };
 
 let seedProjects: any[] = [];
 try {
@@ -8,15 +10,19 @@ try {
     const raw = fs.readFileSync(filePath, "utf-8");
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      seedProjects = parsed.map((p, index) => ({
-        ...p,
-        id: p.id || p.project_code || index + 1,
-        original_cost: Number(p.original_cost) || 0,
-        revised_cost: Number(p.revised_cost ?? p.original_cost) || 0,
-        cumulative_expenditure: Number(p.cumulative_expenditure) || 0,
-        physical_progress: Number(p.physical_progress) || 0,
-        status: p.status || "Ongoing"
-      }));
+      seedProjects = parsed.map((p, index) => {
+        const agency = extractAgency(p.project_name, p.sector, p.agency);
+        return {
+          ...p,
+          id: p.id || p.project_code || index + 1,
+          agency,
+          original_cost: Number(p.original_cost) || 0,
+          revised_cost: Number(p.revised_cost ?? p.original_cost) || 0,
+          cumulative_expenditure: Number(p.cumulative_expenditure) || 0,
+          physical_progress: Number(p.physical_progress) || 0,
+          status: p.status || "Ongoing"
+        };
+      });
     }
   }
 } catch (e) {
@@ -37,16 +43,7 @@ export const FALLBACK_BENCHMARKS = [
   { sector: "Urban Public Transport", avg_cost_overrun_pct: 17.1, avg_delay_months: 19.8, benchmark_efficiency_score: 80.5 }
 ];
 
-export const FALLBACK_AGENCY_RANKINGS = [
-  { agency: "NHAI", total_projects: 420, on_time_projects: 310, delayed_projects: 110, delay_frequency_pct: 26.2, performance_score: 84.5 },
-  { agency: "DFCCIL", total_projects: 42, on_time_projects: 24, delayed_projects: 18, delay_frequency_pct: 42.8, performance_score: 71.0 },
-  { agency: "PGCIL", total_projects: 95, on_time_projects: 88, delayed_projects: 7, delay_frequency_pct: 7.4, performance_score: 94.2 },
-  { agency: "NTPC", total_projects: 86, on_time_projects: 74, delayed_projects: 12, delay_frequency_pct: 13.9, performance_score: 91.0 },
-  { agency: "PPA", total_projects: 18, on_time_projects: 6, delayed_projects: 12, delay_frequency_pct: 66.7, performance_score: 58.0 },
-  { agency: "GAIL", total_projects: 34, on_time_projects: 29, delayed_projects: 5, delay_frequency_pct: 14.7, performance_score: 89.2 },
-  { agency: "SECL", total_projects: 28, on_time_projects: 19, delayed_projects: 9, delay_frequency_pct: 32.1, performance_score: 79.5 },
-  { agency: "BMRCL", total_projects: 16, on_time_projects: 9, delayed_projects: 7, delay_frequency_pct: 43.8, performance_score: 72.0 }
-];
+export { FALLBACK_AGENCY_RANKINGS } from "./agency-extractor";
 
 export const FALLBACK_ALERTS = [
   {

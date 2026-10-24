@@ -17,6 +17,7 @@ import InvestmentParity from "./InvestmentParity";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SessionUser } from "@/lib/auth";
 import { I18N } from "@/lib/i18n";
+import { extractAgency, FALLBACK_AGENCY_RANKINGS } from "@/lib/agency-extractor";
 
 
 
@@ -114,7 +115,14 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
   };
 
   const projectsWithMinistry = useMemo(() => {
-    return allProjects.map(p => ({ ...p, ministry: getMinistry(p.sector, p.agency, p.project_name, p.original_cost, p.ministry) }));
+    return allProjects.map(p => {
+      const agency = extractAgency(p.project_name, p.sector, p.agency);
+      return { 
+        ...p, 
+        agency,
+        ministry: getMinistry(p.sector, agency, p.project_name, p.original_cost, p.ministry) 
+      };
+    });
   }, [allProjects]);
 
   // Derive unique options for dropdowns
@@ -228,15 +236,16 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
       else if (name.match(/school|university|iit|nit|education/) || ag.match(/kvs|navodaya/)) sector = "Education";
       else if (name.match(/metro|urban|mrtc|smart city/) || ag.match(/metro/)) sector = "Urban Public Transport";
       const oc = p.original_cost || 0; const rc = p.revised_cost || oc; const exp = p.cumulative_expenditure || 0;
-      return { ...p, sector, cost_overrun_pct: oc > 0 ? ((rc - oc) / oc) * 100 : 0, expenditure_progress_pct: rc > 0 ? (exp / rc) * 100 : 0, physical_progress: p.physical_progress || 0 };
+      const agency = extractAgency(p.project_name, sector, p.agency);
+      return { ...p, agency, sector, cost_overrun_pct: oc > 0 ? ((rc - oc) / oc) * 100 : 0, expenditure_progress_pct: rc > 0 ? (exp / rc) * 100 : 0, physical_progress: p.physical_progress || 0 };
     });
   }, [allProjects]);
 
   const dynamicAgencyData = useMemo(() => {
     const agencyMap = new Map<string, any>();
     benchmarkProjects.forEach(p => {
-      const ag = p.agency;
-      if (!ag) return;
+      const ag = extractAgency(p.project_name, p.sector, p.agency);
+      if (!ag || ag === "Unknown Agency") return;
       if (!agencyMap.has(ag)) {
         agencyMap.set(ag, { agency: ag, total_projects: 0, delayed_project_count: 0, sum_cost_overrun: 0 });
       }
@@ -280,6 +289,23 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
 
     return results;
   }, [benchmarkProjects]);
+
+  const effectiveAgencyData = useMemo(() => {
+    // 1. Live Supabase agency rankings passed from server
+    if (agencyData && Array.isArray(agencyData) && agencyData.length > 0) {
+      const valid = agencyData.filter((a: any) => a.agency && a.agency !== "Unknown Agency");
+      if (valid.length > 1) return valid;
+    }
+    // 2. Computed dynamic agency metrics from current projects
+    const validDynamic = dynamicAgencyData.filter((a: any) => a.agency && a.agency !== "Unknown Agency");
+    if (validDynamic.length > 1) return validDynamic;
+    
+    // 3. Fallback rankings
+    if (agencyData && agencyData.length > 0 && agencyData[0].agency !== "Unknown Agency") {
+      return agencyData;
+    }
+    return FALLBACK_AGENCY_RANKINGS;
+  }, [agencyData, dynamicAgencyData]);
 
 
   return (
@@ -503,7 +529,7 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
 
       {activeTab === "proposals" && (
         <div className="space-y-8 p-6">
-          <WorkflowInbox currentUser={currentUser as any} agencyRanks={dynamicAgencyData} />
+          <WorkflowInbox currentUser={currentUser as any} agencyRanks={effectiveAgencyData} />
           {(currentUser?.role === "agency" || currentUser?.role === "ministry") && (
             <ProposalForm currentUser={currentUser as any} onSuccess={() => window.location.reload()} />
           )}
@@ -530,7 +556,7 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
       ) : activeTab !== "dashboard" && activeTab !== "proposals" && activeTab !== "complaints" && activeTab !== "hotspots" && activeTab !== "inspectors" && activeTab !== "gatekeeper" && (
         <AnalyticsTabs
           activeTab={activeTab}
-          agencyData={dynamicAgencyData}
+          agencyData={effectiveAgencyData}
           projects={benchmarkProjects}
           benchmarks={benchResData}
           alerts={alertsData}
