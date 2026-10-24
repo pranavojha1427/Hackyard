@@ -7,115 +7,147 @@
  */
 
 export function extractAgency(name?: string, sector?: string, existingAgency?: string): string {
-  // If a valid agency already exists and is not a placeholder, clean and return it
-  if (existingAgency && existingAgency.trim() !== "" && existingAgency !== "Unknown Agency") {
-    const raw = existingAgency.trim();
-    // Normalize bracketed tags like "[AAI]" or "[NHAI]"
-    const bracketMatch = raw.match(/\[([A-Z0-9\s\-_&]+)\]/);
-    if (bracketMatch && bracketMatch[1] && bracketMatch[1].length <= 15) {
-      const code = bracketMatch[1].trim();
-      if (!code.match(/^\d/) && !code.includes("MW") && !code.includes("KM") && !code.includes("MT")) {
-        return code;
+  let ag = existingAgency && existingAgency.trim() !== "" && existingAgency !== "Unknown Agency" 
+    ? existingAgency.trim() 
+    : null;
+  const n = (name || "").trim();
+
+  if (!ag && n) {
+    const parenMatches = [...n.matchAll(/\(([^)]+)\)/g)].map(m => m[1].trim());
+    const cleanParens = parenMatches.filter(m => {
+      if (!m || m === "-" || m === "--") return false;
+      if (/^[A-Z]\d{6,10}$/i.test(m)) return false;
+      if (/^\d+$/.test(m)) return false;
+      const lower = m.toLowerCase();
+      if (["agency", "project code", "legacy ocms code", "pmgid", "package-1", "phase-i", "phase-ii", "phase-1", "phase-2", "phase i", "phase ii"].includes(lower)) return false;
+      return true;
+    });
+
+    for (const c of cleanParens) {
+      if (c.length >= 2 && c.length <= 80) {
+        if (c.includes("Authority") || c.includes("Limited") || c.includes("Corporation") || c.includes("Railway") || 
+            c.includes("Ministry") || c.includes("Department") || c.includes("Board") || c.includes("Institute") ||
+            c.includes("NHAI") || c.includes("NHIDCL") || c.includes("MoRTH") || c.includes("POWERGRID") ||
+            c.includes("NTPC") || c.includes("ONGC") || c.includes("IOCL") || c.includes("BPCL") || c.includes("HPCL") ||
+            c.includes("GAIL") || c.includes("CIL") || c.includes("BCCL") || c.includes("CCL") || c.includes("ECL") ||
+            c.includes("WCL") || c.includes("SECL") || c.includes("MCL") || c.includes("NCL") || c.includes("SCCL") ||
+            c.includes("SAIL") || c.includes("RVNL") || c.includes("DFCCIL") || c.includes("DMRC") || c.includes("BMRCL") ||
+            c.includes("BRO") || c.includes("CPWD") || c.includes("AIIMS") || c.includes("NIT") || c.includes("IIT") ||
+            c.includes("Metro") || c.includes("Adani") || c.includes("Port") || c.includes("Railways")) {
+          ag = c;
+          break;
+        }
       }
     }
-    // Clean long descriptive names
-    if (raw.toLowerCase().includes("national highways authority of india") || raw === "NHAI") return "NHAI";
-    if (raw.toLowerCase().includes("nhidcl")) return "NHIDCL";
-    if (raw.toLowerCase().includes("airport authority of india") || raw === "AAI") return "AAI";
-    if (raw.toLowerCase().includes("power grid corporation") || raw.toLowerCase().includes("powergrid")) return "POWERGRID";
-    if (raw.toLowerCase().includes("national thermal power") || raw === "NTPC") return "NTPC";
-    if (raw.toLowerCase().includes("coal india") || raw === "CIL") return "CIL";
-    if (raw.toLowerCase().includes("dedicated freight corridor") || raw === "DFCCIL") return "DFCCIL";
-    if (raw.toLowerCase().includes("rail vikas") || raw === "RVNL") return "RVNL";
-    if (raw.toLowerCase().includes("railway") || raw.toLowerCase().includes("rail")) return "Indian Railways";
-    if (raw.toLowerCase().includes("indian oil") || raw === "IOCL") return "IOCL";
-    if (raw.toLowerCase().includes("bharat petroleum") || raw === "BPCL") return "BPCL";
-    if (raw.toLowerCase().includes("hindustan petroleum") || raw === "HPCL") return "HPCL";
-    if (raw.toLowerCase().includes("oil and natural gas") || raw === "ONGC") return "ONGC";
-    if (raw.toLowerCase().includes("gas authority") || raw === "GAIL") return "GAIL";
-    if (raw.toLowerCase().includes("water commission") || raw === "CWC") return "CWC";
-    if (raw.toLowerCase().includes("delhi metro") || raw === "DMRC") return "DMRC";
-    if (raw.toLowerCase().includes("bangalore metro") || raw === "BMRCL") return "BMRCL";
-    if (raw.toLowerCase().includes("border roads") || raw === "BRO") return "BRO";
-    if (raw.toLowerCase().includes("central public works") || raw === "CPWD") return "CPWD";
-    if (raw.toLowerCase().includes("steel authority") || raw === "SAIL") return "SAIL";
-    if (raw.toLowerCase().includes("telecom") || raw.toLowerCase().includes("bsnl")) return "BSNL";
-    return raw;
-  }
 
-  const n = (name || "").toLowerCase();
-  
-  // Check brackets in project name, e.g. "4-Laning of NH-33 [NHAI]"
-  const bm = (name || "").match(/\[([A-Z0-9\s\-_&]+)\]/);
-  if (bm && bm[1] && bm[1].length <= 15) {
-    const val = bm[1].trim();
-    if (!val.match(/^\d/) && !val.includes("MW") && !val.includes("KM") && !val.includes("MT")) {
-      return val;
+    if (!ag && cleanParens.length > 0) {
+      ag = cleanParens[0];
     }
   }
 
-  // Agency keywords from project title
-  if (n.includes("airport authority") || n.includes("aai") || n.includes("airport")) return "AAI";
-  if (n.includes("nhai") || n.includes("national highway") || n.includes("expressway") || n.includes("nh-")) return "NHAI";
-  if (n.includes("nhidcl")) return "NHIDCL";
-  if (n.includes("dfccil") || n.includes("dedicated freight")) return "DFCCIL";
-  if (n.includes("rvnl") || n.includes("rail vikas")) return "RVNL";
-  if (n.includes("ircon")) return "IRCON";
-  if (n.includes("railway") || n.includes("rail") || n.includes("track") || n.includes("gauge conversion")) return "Indian Railways";
-  if (n.includes("ntpc") || n.includes("thermal power")) return "NTPC";
-  if (n.includes("nhpc") || n.includes("hydroelectric")) return "NHPC";
-  if (n.includes("powergrid") || n.includes("pgcil") || n.includes("substation") || n.includes("transmission")) return "POWERGRID";
-  if (n.includes("iocl") || n.includes("indian oil") || n.includes("refinery")) return "IOCL";
-  if (n.includes("gail") || n.includes("gas pipeline")) return "GAIL";
-  if (n.includes("bpcl") || n.includes("bharat petroleum")) return "BPCL";
-  if (n.includes("hpcl") || n.includes("hindustan petroleum")) return "HPCL";
-  if (n.includes("ongc")) return "ONGC";
-  if (n.includes("secl")) return "SECL";
-  if (n.includes("mcl")) return "MCL";
-  if (n.includes("wcl")) return "WCL";
-  if (n.includes("ccl")) return "CCL";
-  if (n.includes("bccl")) return "BCCL";
-  if (n.includes("coal india") || n.includes("cil") || n.includes("coal mine")) return "CIL";
-  if (n.includes("sail") || n.includes("steel plant") || n.includes("steel authority")) return "SAIL";
-  if (n.includes("bmrcl") || n.includes("bangalore metro")) return "BMRCL";
-  if (n.includes("dmrc") || n.includes("delhi metro")) return "DMRC";
-  if (n.includes("mmrda") || n.includes("mumbai metro")) return "MMRDA";
-  if (n.includes("adani")) return "Adani Infrastructure";
-  if (n.includes("cwc") || n.includes("water commission") || n.includes("barrage") || n.includes("dam")) return "CWC";
-  if (n.includes("cpwd") || n.includes("central public works")) return "CPWD";
-  if (n.includes("bro") || n.includes("border roads")) return "BRO";
-  if (n.includes("telecom") || n.includes("bsnl") || n.includes("optical fibre")) return "BSNL";
-  if (n.includes("hospital") || n.includes("aiims") || n.includes("medical")) return "AIIMS";
+  // Check brackets like [NHAI], [AAI], [BCCL] if still missing
+  if (!ag && n) {
+    const bracketMatches = [...n.matchAll(/\[([^\]]+)\]/g)].map(m => m[1].trim());
+    for (const b of bracketMatches) {
+      if (!/^\d+$/.test(b) && !b.includes("Phase") && !b.includes("MW") && !b.includes("KM") && b.length <= 25) {
+        ag = b;
+        break;
+      }
+    }
+  }
 
-  // Derive by Sector
+  // Canonicalize common agency acronyms and variants
+  if (ag) {
+    const l = ag.toLowerCase();
+    if (l.includes("national highways authority") || l === "nhai" || l.includes("[nhai]")) return "National Highways Authority of India [NHAI]";
+    if (l.includes("nhidcl")) return "National Highways & Infrastructure Development Corp [NHIDCL]";
+    if (l.includes("morth") || l.includes("road transport & highways")) return "Ministry of Road Transport & Highways [MoRTH]";
+    if (l.includes("airport authority") || l === "aai" || l.includes("[aai]")) return "Airports Authority of India [AAI]";
+    if (l.includes("power grid") || l.includes("powergrid") || l.includes("[powergrid]")) return "Power Grid Corporation of India [POWERGRID]";
+    if (l.includes("national thermal power") || l === "ntpc" || l.includes("[ntpc]")) return "NTPC Limited";
+    if (l.includes("western coalfields") || l === "wcl" || l.includes("[wcl]")) return "Western Coalfields Limited [WCL]";
+    if (l.includes("eastern coalfields") || l === "ecl" || l.includes("[ecl]")) return "Eastern Coalfields Limited [ECL]";
+    if (l.includes("bharat coking coal") || l === "bccl" || l.includes("[bccl]")) return "Bharat Coking Coal Limited [BCCL]";
+    if (l.includes("central coalfields") || l === "ccl" || l.includes("[ccl]")) return "Central Coalfields Limited [CCL]";
+    if (l.includes("south eastern coalfields") || l === "secl" || l.includes("[secl]")) return "South Eastern Coalfields Limited [SECL]";
+    if (l.includes("mahanadi coalfields") || l === "mcl" || l.includes("[mcl]")) return "Mahanadi Coalfields Limited [MCL]";
+    if (l.includes("northern coalfields") || l === "ncl" || l.includes("[ncl]")) return "Northern Coalfields Limited [NCL]";
+    if (l.includes("coal india") || l === "cil" || l.includes("[cil]")) return "Coal India Limited [CIL]";
+    if (l.includes("steel authority") || l === "sail" || l.includes("[sail]")) return "Steel Authority of India Limited [SAIL]";
+    if (l.includes("oil and natural gas") || l === "ongc" || l.includes("[ongc]")) return "Oil and Natural Gas Corporation [ONGC]";
+    if (l.includes("indian oil") || l === "iocl" || l.includes("[iocl]")) return "Indian Oil Corporation Limited [IOCL]";
+    if (l.includes("bharat petroleum") || l === "bpcl" || l.includes("[bpcl]")) return "Bharat Petroleum Corporation Limited [BPCL]";
+    if (l.includes("hindustan petroleum") || l === "hpcl" || l.includes("[hpcl]")) return "Hindustan Petroleum Corporation Limited [HPCL]";
+    if (l.includes("gas authority") || l === "gail" || l.includes("[gail]")) return "GAIL (India) Limited";
+    if (l.includes("rail vikas") || l === "rvnl" || l.includes("[rvnl]")) return "Rail Vikas Nigam Limited [RVNL]";
+    if (l.includes("dedicated freight") || l === "dfccil" || l.includes("[dfccil]")) return "Dedicated Freight Corridor Corp [DFCCIL]";
+    if (l.includes("delhi metro") || l === "dmrc" || l.includes("[dmrc]")) return "Delhi Metro Rail Corporation [DMRC]";
+    if (l.includes("bengaluru metro") || l.includes("bangalore metro") || l === "bmrcl" || l.includes("[bmrcl]")) return "Bangalore Metro Rail Corporation [BMRCL]";
+    if (l.includes("central public works") || l === "cpwd" || l.includes("[cpwd]")) return "Central Public Works Department [CPWD]";
+    if (l.includes("border roads") || l === "bro" || l.includes("[bro]")) return "Border Roads Organisation [BRO]";
+    if (l.includes("central railway") || l === "cr" || l.includes("[cr]")) return "Central Railway";
+    if (l.includes("eastern railway") || l === "er" || l.includes("[er]")) return "Eastern Railway";
+    if (l.includes("northern railway") || l === "nr" || l.includes("[nr]")) return "Northern Railway";
+    if (l.includes("southern railway") || l === "sr" || l.includes("[sr]")) return "Southern Railway";
+    if (l.includes("western railway") || l === "wr" || l.includes("[wr]")) return "Western Railway";
+    if (l.includes("east central railway") || l.includes("[ecr]")) return "East Central Railway";
+    if (l.includes("east coast railway") || l.includes("[ecor]")) return "East Coast Railway";
+    if (l.includes("north central railway") || l.includes("[ncr]")) return "North Central Railway";
+    if (l.includes("north eastern railway") || l.includes("[ner]")) return "North Eastern Railway";
+    if (l.includes("northeast frontier railway") || l.includes("[nfr]")) return "Northeast Frontier Railway";
+    if (l.includes("north western railway") || l.includes("[nwr]")) return "North Western Railway";
+    if (l.includes("south central railway") || l.includes("[scr]")) return "South Central Railway";
+    if (l.includes("south eastern railway") || l.includes("[ser]")) return "South Eastern Railway";
+    if (l.includes("south east central railway") || l.includes("[secr]")) return "South East Central Railway";
+    if (l.includes("south western railway") || l.includes("[swr]")) return "South Western Railway";
+    if (l.includes("west central railway") || l.includes("[wcr]")) return "West Central Railway";
+    if (l.includes("konkan railway") || l.includes("[krcl]")) return "Konkan Railway Corporation";
+    if (l.includes("kolkata metro") || l.includes("metro railway, kolkata")) return "Kolkata Metro";
+    return ag;
+  }
+
+  // Keyword inferences from title
+  const nl = n.toLowerCase();
+  if (nl.includes("nhai") || nl.includes("national highway")) return "National Highways Authority of India [NHAI]";
+  if (nl.includes("nhidcl")) return "National Highways & Infrastructure Development Corp [NHIDCL]";
+  if (nl.includes("morth")) return "Ministry of Road Transport & Highways [MoRTH]";
+  if (nl.includes("airport") || nl.includes("aai")) return "Airports Authority of India [AAI]";
+  if (nl.includes("powergrid") || nl.includes("transmission")) return "Power Grid Corporation of India [POWERGRID]";
+  if (nl.includes("ntpc")) return "NTPC Limited";
+  if (nl.includes("coal") || nl.includes("mine")) return "Coal India Limited [CIL]";
+  if (nl.includes("metro")) return "Metro Rail Corporation";
+  if (nl.includes("railway") || nl.includes("rail")) return "Indian Railways";
+  if (nl.includes("water") || nl.includes("dam") || nl.includes("barrage")) return "Central Water Commission [CWC]";
+  if (nl.includes("hospital") || nl.includes("aiims")) return "AIIMS / Health Ministry";
+  if (nl.includes("iit") || nl.includes("nit") || nl.includes("university")) return "Ministry of Education";
+  if (nl.includes("petroleum") || nl.includes("refinery") || nl.includes("pipeline")) return "Oil and Natural Gas Corporation [ONGC]";
+
   const s = (sector || "").toLowerCase();
-  if (s.includes("aviation") || s.includes("airport")) return "AAI";
-  if (s.includes("road") || s.includes("highway")) return "NHAI";
+  if (s.includes("aviation") || s.includes("airport")) return "Airports Authority of India [AAI]";
+  if (s.includes("road") || s.includes("highway")) return "National Highways Authority of India [NHAI]";
   if (s.includes("rail")) return "Indian Railways";
-  if (s.includes("power") || s.includes("generation")) return "NTPC";
-  if (s.includes("transmission") || s.includes("grid")) return "POWERGRID";
-  if (s.includes("petroleum") || s.includes("oil") || s.includes("gas")) return "IOCL";
-  if (s.includes("coal")) return "CIL";
-  if (s.includes("urban") || s.includes("metro")) return "DMRC";
-  if (s.includes("water") || s.includes("irrigation")) return "CWC";
-  if (s.includes("telecom") || s.includes("communication")) return "BSNL";
-  if (s.includes("health")) return "AIIMS";
+  if (s.includes("power") || s.includes("generation")) return "NTPC Limited";
+  if (s.includes("transmission") || s.includes("grid")) return "Power Grid Corporation of India [POWERGRID]";
+  if (s.includes("petroleum") || s.includes("oil") || s.includes("gas")) return "Oil and Natural Gas Corporation [ONGC]";
+  if (s.includes("coal")) return "Coal India Limited [CIL]";
+  if (s.includes("urban") || s.includes("metro")) return "Metro Rail Corporation";
+  if (s.includes("water") || s.includes("irrigation")) return "Central Water Commission [CWC]";
 
-  return "NHAI";
+  return "State Infrastructure Agency";
 }
 
 export const FALLBACK_AGENCY_RANKINGS = [
-  { agency: "NHAI", total_projects: 1033, delayed_project_count: 271, delay_frequency_pct: 26.2, avg_cost_overrun_pct: 14.5 },
-  { agency: "NHIDCL", total_projects: 172, delayed_project_count: 55, delay_frequency_pct: 32.0, avg_cost_overrun_pct: 18.2 },
-  { agency: "Indian Railways", total_projects: 113, delayed_project_count: 48, delay_frequency_pct: 42.5, avg_cost_overrun_pct: 22.8 },
-  { agency: "CWC", total_projects: 76, delayed_project_count: 26, delay_frequency_pct: 34.2, avg_cost_overrun_pct: 16.4 },
-  { agency: "POWERGRID", total_projects: 57, delayed_project_count: 4, delay_frequency_pct: 7.0, avg_cost_overrun_pct: 5.2 },
-  { agency: "IOCL", total_projects: 51, delayed_project_count: 8, delay_frequency_pct: 15.7, avg_cost_overrun_pct: 8.9 },
-  { agency: "CIL", total_projects: 46, delayed_project_count: 14, delay_frequency_pct: 30.4, avg_cost_overrun_pct: 19.1 },
-  { agency: "DFCCIL", total_projects: 42, delayed_project_count: 18, delay_frequency_pct: 42.8, avg_cost_overrun_pct: 29.0 },
-  { agency: "AAI", total_projects: 25, delayed_project_count: 5, delay_frequency_pct: 20.0, avg_cost_overrun_pct: 10.5 },
-  { agency: "NTPC", total_projects: 15, delayed_project_count: 2, delay_frequency_pct: 13.3, avg_cost_overrun_pct: 7.4 },
-  { agency: "RVNL", total_projects: 16, delayed_project_count: 6, delay_frequency_pct: 37.5, avg_cost_overrun_pct: 21.0 },
-  { agency: "SAIL", total_projects: 12, delayed_project_count: 3, delay_frequency_pct: 25.0, avg_cost_overrun_pct: 12.0 },
-  { agency: "DMRC", total_projects: 7, delayed_project_count: 1, delay_frequency_pct: 14.3, avg_cost_overrun_pct: 6.8 }
+  { agency: "National Highways Authority of India [NHAI]", total_projects: 488, delayed_project_count: 128, delay_frequency_pct: 26.2, avg_cost_overrun_pct: 14.5 },
+  { agency: "Ministry of Road Transport & Highways [MoRTH]", total_projects: 349, delayed_project_count: 85, delay_frequency_pct: 24.3, avg_cost_overrun_pct: 11.2 },
+  { agency: "National Highways & Infrastructure Development Corp [NHIDCL]", total_projects: 173, delayed_project_count: 55, delay_frequency_pct: 31.8, avg_cost_overrun_pct: 18.2 },
+  { agency: "Central Railway", total_projects: 68, delayed_project_count: 24, delay_frequency_pct: 35.3, avg_cost_overrun_pct: 19.4 },
+  { agency: "Power Grid Corporation of India [POWERGRID]", total_projects: 67, delayed_project_count: 5, delay_frequency_pct: 7.5, avg_cost_overrun_pct: 4.8 },
+  { agency: "Western Railway", total_projects: 44, delayed_project_count: 15, delay_frequency_pct: 34.1, avg_cost_overrun_pct: 16.7 },
+  { agency: "Oil and Natural Gas Corporation [ONGC]", total_projects: 38, delayed_project_count: 6, delay_frequency_pct: 15.8, avg_cost_overrun_pct: 8.9 },
+  { agency: "Western Coalfields Limited [WCL]", total_projects: 32, delayed_project_count: 9, delay_frequency_pct: 28.1, avg_cost_overrun_pct: 12.3 },
+  { agency: "Airports Authority of India [AAI]", total_projects: 26, delayed_project_count: 5, delay_frequency_pct: 19.2, avg_cost_overrun_pct: 9.6 },
+  { agency: "Eastern Coalfields Limited [ECL]", total_projects: 25, delayed_project_count: 7, delay_frequency_pct: 28.0, avg_cost_overrun_pct: 14.2 },
+  { agency: "East Coast Railway", total_projects: 20, delayed_project_count: 8, delay_frequency_pct: 40.0, avg_cost_overrun_pct: 21.5 },
+  { agency: "Eastern Railway", total_projects: 14, delayed_project_count: 5, delay_frequency_pct: 35.7, avg_cost_overrun_pct: 18.0 },
+  { agency: "Steel Authority of India Limited [SAIL]", total_projects: 12, delayed_project_count: 3, delay_frequency_pct: 25.0, avg_cost_overrun_pct: 11.8 }
 ];

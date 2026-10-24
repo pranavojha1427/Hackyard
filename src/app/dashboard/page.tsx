@@ -18,7 +18,6 @@ type CacheEntry<T> = {
   timestamp: number;
 };
 
-const cachedProjectsMap = new Map<string, CacheEntry<any[]>>();
 let cachedAgencyRankings: CacheEntry<any[]> | null = null;
 let cachedBenchmarks: CacheEntry<any[]> | null = null;
 let cachedAlerts: CacheEntry<any[]> | null = null;
@@ -57,45 +56,24 @@ export default async function DashboardPage() {
   try {
     const supabase = await createClient();
     const isFiltered = Object.keys(matchFilter).length > 0;
-    const filterKey = JSON.stringify(matchFilter);
 
-    // 1. Target projects query (cached per role/filter for 5 minutes)
-    let projectPromise: Promise<any>;
-    const cachedEntry = cachedProjectsMap.get(filterKey);
-    if (cachedEntry && Date.now() - cachedEntry.timestamp < CACHE_TTL_MS) {
-      projectPromise = Promise.resolve([{ data: cachedEntry.data }]);
-    } else if (isFiltered) {
-      projectPromise = Promise.resolve(
-        supabase
-          .from("projects")
-          .select("id, project_name, project_code, sector, ministry, agency, state, original_cost, revised_cost, cumulative_expenditure, physical_progress, status, original_doc, revised_doc, contractor_delay, land_acquisition_issue, forest_clearance_issue")
-          .match(matchFilter)
-          .limit(3000)
-      ).then(res => [res]).catch(() => []);
-    } else {
-      const pageSize = 1000;
-      const estimatedTotal = 12000;
-      const pages = Math.ceil(estimatedTotal / pageSize);
-      const promises = Array.from({ length: pages }).map((_, page) => 
-        supabase
-          .from("projects")
-          .select("id, project_name, project_code, sector, ministry, agency, state, original_cost, revised_cost, cumulative_expenditure, physical_progress, status, original_doc, revised_doc, contractor_delay, land_acquisition_issue, forest_clearance_issue")
-          .range(page * pageSize, (page + 1) * pageSize - 1)
-      );
-      projectPromise = Promise.all(promises.map(p => Promise.resolve(p).catch(e => ({ data: null, error: e }))));
+    // 1. Authoritative Indian infrastructure projects loaded directly from projects_seed.json
+    let seedProjectsList = [...FALLBACK_PROJECTS];
+    if (isFiltered) {
+      if (matchFilter.state) {
+        const targetState = matchFilter.state.toLowerCase();
+        seedProjectsList = seedProjectsList.filter(p => (p.state || "").toLowerCase().includes(targetState));
+      }
+      if (matchFilter.ministry) {
+        seedProjectsList = seedProjectsList.filter(p => p.ministry === matchFilter.ministry);
+      }
+      if (matchFilter.agency) {
+        seedProjectsList = seedProjectsList.filter(p => p.agency === matchFilter.agency);
+      }
     }
+    allProjectsRaw = seedProjectsList;
 
-    // 2. Target agency rankings (cached for 5 minutes)
-    let agencyPromise: Promise<any>;
-    if (cachedAgencyRankings && Date.now() - cachedAgencyRankings.timestamp < CACHE_TTL_MS) {
-      agencyPromise = Promise.resolve({ data: cachedAgencyRankings.data });
-    } else {
-      agencyPromise = Promise.resolve(
-        supabase.from("agency_performance_rankings").select("*").order("delay_frequency_pct", { ascending: false })
-      ).catch(e => ({ data: null, error: e }));
-    }
-
-    // 3. Sector benchmarks (cached for 5 minutes)
+    // 2. Sector benchmarks (cached for 5 minutes)
     let benchPromise: Promise<any>;
     if (cachedBenchmarks && Date.now() - cachedBenchmarks.timestamp < CACHE_TTL_MS) {
       benchPromise = Promise.resolve({ data: cachedBenchmarks.data });
@@ -103,7 +81,7 @@ export default async function DashboardPage() {
       benchPromise = Promise.resolve(supabase.from("sector_benchmarks").select("*")).catch(e => ({ data: null, error: e }));
     }
 
-    // 4. Alerts (cached for 5 minutes)
+    // 3. Alerts (cached for 5 minutes)
     let alertsPromise: Promise<any>;
     if (cachedAlerts && Date.now() - cachedAlerts.timestamp < CACHE_TTL_MS) {
       alertsPromise = Promise.resolve({ data: cachedAlerts.data });
@@ -111,17 +89,7 @@ export default async function DashboardPage() {
       alertsPromise = Promise.resolve(supabase.from("project_alerts").select("*").order("id", { ascending: false })).catch(e => ({ data: null, error: e }));
     }
 
-    // 5. KPI RPC (cached for 5 minutes, omitted for filtered views)
-    let kpiPromise: Promise<any>;
-    if (isFiltered) {
-      kpiPromise = Promise.resolve({ data: null });
-    } else if (cachedPortfolioKpi && Date.now() - cachedPortfolioKpi.timestamp < CACHE_TTL_MS) {
-      kpiPromise = Promise.resolve({ data: [cachedPortfolioKpi.data] });
-    } else {
-      kpiPromise = Promise.resolve(supabase.rpc("get_portfolio_kpis")).catch(e => ({ data: null, error: e }));
-    }
-
-    // 6. Mongo projects (cached for 1 minute)
+    // 4. Mongo projects (cached for 1 minute)
     let mongoPromise: Promise<any>;
     if (cachedMongoProjects && Date.now() - cachedMongoProjects.timestamp < SHORT_CACHE_TTL_MS) {
       mongoPromise = Promise.resolve(cachedMongoProjects.data);
@@ -129,45 +97,38 @@ export default async function DashboardPage() {
       mongoPromise = getMongoProjects().catch(() => []);
     }
 
-    const [results, agencyRes, benchRes, alertsRes, mongoProjects, kpiRes] = await Promise.all([
-      withTimeout(projectPromise, isFiltered ? 1500 : 3500, []),
-      withTimeout(agencyPromise, 1500, { data: null, error: null }),
+    // 5. Mongo overrides (cached for 1 minute)
+    let overridesPromise: Promise<any>;
+    if (cachedOverrides && Date.now() - cachedOverrides.timestamp < SHORT_CACHE_TTL_MS) {
+      overridesPromise = Promise.resolve(cachedOverrides.data);
+    } else {
+      overridesPromise = getProjectOverrides().catch(() => []);
+    }
+
+    const [benchRes, alertsRes, mongoProjects, fetchedOverrides] = await Promise.all([
       withTimeout(benchPromise, 1500, { data: null, error: null }),
       withTimeout(alertsPromise, 1500, { data: null, error: null }),
       withTimeout(mongoPromise, 300, []),
-      withTimeout(kpiPromise, 1500, { data: null, error: null }),
+      withTimeout(overridesPromise, 300, []),
     ]);
 
-    for (const res of results) {
-      if (res?.data) {
-        allProjectsRaw.push(...res.data);
-      }
-    }
-
-    agencyData = agencyRes?.data || [];
     benchData = benchRes?.data || [];
     alertsData = alertsRes?.data || [];
     mongoAgencyProjects = mongoProjects || [];
-    kpi = kpiRes?.data?.[0] || null;
+    overridesData = fetchedOverrides || [];
 
     // Populate caches if fetched freshly
-    if (agencyData.length > 0 && !cachedAgencyRankings) {
-      cachedAgencyRankings = { data: agencyData, timestamp: Date.now() };
-    }
     if (benchData.length > 0 && !cachedBenchmarks) {
       cachedBenchmarks = { data: benchData, timestamp: Date.now() };
     }
     if (alertsData.length > 0 && !cachedAlerts) {
       cachedAlerts = { data: alertsData, timestamp: Date.now() };
     }
-    if (kpi && !cachedPortfolioKpi) {
-      cachedPortfolioKpi = { data: kpi, timestamp: Date.now() };
-    }
     if (mongoAgencyProjects.length > 0 && !cachedMongoProjects) {
       cachedMongoProjects = { data: mongoAgencyProjects, timestamp: Date.now() };
     }
-    if (allProjectsRaw.length > 0) {
-      cachedProjectsMap.set(filterKey, { data: allProjectsRaw, timestamp: Date.now() });
+    if (overridesData.length > 0 && !cachedOverrides) {
+      cachedOverrides = { data: overridesData, timestamp: Date.now() };
     }
   } catch (err) {
     console.warn("Database initialization/fetch warning:", err);

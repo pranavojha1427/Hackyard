@@ -256,26 +256,25 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
 
   const dynamicAgencyData = useMemo(() => {
     const agencyMap = new Map<string, any>();
-    benchmarkProjects.forEach(p => {
-      const ag = p.agency;
-      if (!ag) return;
+    // Compute agencies dynamically for the active state/filters from filteredProjects
+    filteredProjects.forEach(p => {
+      const ag = p.agency || extractAgency(p.project_name, p.sector, p.agency);
+      if (!ag || ag === "Unknown Agency" || ag === "State Infrastructure Agency") return;
       if (!agencyMap.has(ag)) {
         agencyMap.set(ag, { agency: ag, total_projects: 0, delayed_project_count: 0, sum_cost_overrun: 0 });
       }
       const data = agencyMap.get(ag);
       data.total_projects += 1;
-      data.sum_cost_overrun += (p.cost_overrun_pct || 0);
+      data.sum_cost_overrun += (p.costOverrunPercent || 0);
       
       let isDelayed = false;
-      if (p.original_doc && p.revised_doc) {
-        if (new Date(p.revised_doc) > new Date(p.original_doc)) {
-          isDelayed = true;
-        }
-      } else if (p.status === "Ongoing" && p.original_doc && new Date(p.original_doc) < new Date()) {
-          isDelayed = true;
+      if (p.revised_doc && p.original_doc && new Date(p.revised_doc) > new Date(p.original_doc)) {
+        isDelayed = true;
+      } else if (p.status === "Delayed" || p.contractor_delay || p.land_acquisition_issue || p.forest_clearance_issue) {
+        isDelayed = true;
+      } else if ((p.costOverrunPercent || 0) > 15 || ((p.physical_progress || 0) < 40 && (p.financialProgress || 0) > 60)) {
+        isDelayed = true;
       }
-      
-      if (p.contractor_delay || p.land_acquisition_issue || p.forest_clearance_issue) isDelayed = true;
       
       if (isDelayed) {
         data.delayed_project_count += 1;
@@ -284,8 +283,8 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
 
     const results = [];
     for (const data of agencyMap.values()) {
-      data.delay_frequency_pct = (data.delayed_project_count / data.total_projects) * 100;
-      data.avg_cost_overrun_pct = data.sum_cost_overrun / data.total_projects;
+      data.delay_frequency_pct = data.total_projects > 0 ? (data.delayed_project_count / data.total_projects) * 100 : 0;
+      data.avg_cost_overrun_pct = data.total_projects > 0 ? data.sum_cost_overrun / data.total_projects : 0;
       
       // Round to 2 decimal places
       data.delay_frequency_pct = Math.round(data.delay_frequency_pct * 100) / 100;
@@ -294,15 +293,14 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
       results.push(data);
     }
 
+    // Sort by largest active project count first, then by delay frequency
     results.sort((a, b) => {
-      if (a.delay_frequency_pct !== b.delay_frequency_pct) return a.delay_frequency_pct - b.delay_frequency_pct;
-      if (a.avg_cost_overrun_pct !== b.avg_cost_overrun_pct) return a.avg_cost_overrun_pct - b.avg_cost_overrun_pct;
-      return b.total_projects - a.total_projects;
+      if (b.total_projects !== a.total_projects) return b.total_projects - a.total_projects;
+      return a.delay_frequency_pct - b.delay_frequency_pct;
     });
 
     return results;
-  }, [benchmarkProjects]);
-
+  }, [filteredProjects]);
 
   const getTabIcon = (id: string) => {
     switch (id) {
