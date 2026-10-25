@@ -109,6 +109,16 @@ const FALLBACK_USERS = [
     active: true
   },
   {
+    _id: "6abccbbd35139a39f89e0e1c",
+    name: "Shrabasti Ghosh (Assam Admin)",
+    email: "indiaasm@pragatipulse.gov.in",
+    passwordHash: "$2b$10$Spyk5oNVnJXTG4gGQNq50OCurMwGEIH0zEiXqDSo0nbv4QtsAsW/C",
+    role: "state_admin",
+    state: "Assam",
+    country: "India",
+    active: true
+  },
+  {
     _id: "6ab806cc688034025bc425ab",
     name: "West Bengal Admin",
     email: "adminwb@pragatipulse.gov.in",

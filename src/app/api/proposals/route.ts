@@ -81,7 +81,7 @@ export async function PUT(req: Request) {
 
   if (action === "dismiss" && proposal.createdBy === session.id) {
     newStatus = "dismissed";
-  } else if (session.role === "state_admin") {
+  } else if (session.role === "state_admin" || session.role === "admin") {
     if (action === "approve") {
       if (proposal.type === "agency_proposal") {
         newStatus = "pending_ministry";
@@ -99,20 +99,47 @@ export async function PUT(req: Request) {
     } else if (action === "award_bid") {
       newStatus = "approved"; // finalized
       if (agency && bidAmount) {
-         const supabase = await createClient();
-         await supabase.from('projects').insert([{
-           project_code: proposal.project_code || `PRJ-${Date.now()}`,
-           project_name: proposal.project_name || "New Awarded Project",
-           sector: proposal.sector || "Others",
-           hml_category: proposal.sector || "Others",
-           ministry: proposal.ministry || null,
+         const pCode = proposal.project_code || project_code || `PRJ-${Date.now()}`;
+         const pCost = Number(bidAmount) || Number(proposal.expected_expenditure) || 0;
+         const pSector = proposal.sector || "Others";
+         const pMinistry = proposal.ministry || undefined;
+         const pState = proposal.state || 'Unknown';
+         const pName = proposal.project_name || "New Awarded Project";
+
+         // 1. Create in MongoDB projects collection so it appears immediately on Dashboard & My Projects
+         await createMongoProject({
+           project_code: pCode,
+           project_name: pName,
+           sector: pSector,
+           ministry: pMinistry,
            agency: agency,
-           state: proposal.state || 'Unknown',
-           original_cost: Number(bidAmount) || Number(proposal.expected_expenditure) || 0,
-           revised_cost: Number(bidAmount) || Number(proposal.expected_expenditure) || 0,
+           state: pState,
+           original_cost: pCost,
+           revised_cost: pCost,
            cumulative_expenditure: 0,
            physical_progress: 0
-         }]);
+         }, session.email);
+
+         // 2. Also insert into Supabase for Postgres consistency
+         try {
+           const supabase = await createClient();
+           await supabase.from('projects').insert([{
+             project_code: pCode,
+             project_name: pName,
+             sector: pSector,
+             hml_category: pSector,
+             ministry: pMinistry || null,
+             agency: agency,
+             state: pState,
+             original_cost: pCost,
+             revised_cost: pCost,
+             cumulative_expenditure: 0,
+             physical_progress: 0
+           }]);
+         } catch (supaErr) {
+           console.warn("Supabase insert warning:", supaErr);
+         }
+
          updates.$set.agency = agency;
          updates.$set.expected_expenditure = bidAmount;
       }
@@ -123,22 +150,47 @@ export async function PUT(req: Request) {
       notifTarget = { userId: proposal.createdBy };
       notifMsg = `Ministry approved your proposal (${proposal.project_name})!`;
       
-      // Create the project in Supabase as well since MongoDB is blocked
       if (proposal.type === "agency_proposal") {
-         const supabase = await createClient();
-         await supabase.from('projects').insert([{
-           project_code: proposal.project_code || `PRJ-${Date.now()}`,
-           project_name: proposal.project_name || "New Awarded Project",
-           sector: proposal.sector || "Others",
-           hml_category: proposal.sector || "Others",
-           ministry: proposal.ministry || null,
+         const pCode = proposal.project_code || project_code || `PRJ-${Date.now()}`;
+         const pCost = Number(proposal.expected_expenditure) || 0;
+         const pSector = proposal.sector || "Others";
+         const pMinistry = proposal.ministry || undefined;
+         const pState = proposal.state || 'Unknown';
+         const pName = proposal.project_name || "New Awarded Project";
+
+         // 1. Create in MongoDB projects collection
+         await createMongoProject({
+           project_code: pCode,
+           project_name: pName,
+           sector: pSector,
+           ministry: pMinistry,
            agency: proposal.agency,
-           state: proposal.state || 'Unknown',
-           original_cost: Number(proposal.expected_expenditure) || 0,
-           revised_cost: Number(proposal.expected_expenditure) || 0,
+           state: pState,
+           original_cost: pCost,
+           revised_cost: pCost,
            cumulative_expenditure: 0,
            physical_progress: 0
-         }]);
+         }, session.email);
+
+         // 2. Insert into Supabase
+         try {
+           const supabase = await createClient();
+           await supabase.from('projects').insert([{
+             project_code: pCode,
+             project_name: pName,
+             sector: pSector,
+             hml_category: pSector,
+             ministry: pMinistry || null,
+             agency: proposal.agency,
+             state: pState,
+             original_cost: pCost,
+             revised_cost: pCost,
+             cumulative_expenditure: 0,
+             physical_progress: 0
+           }]);
+         } catch (supaErr) {
+           console.warn("Supabase insert warning:", supaErr);
+         }
       }
     } else if (action === "reject") {
       newStatus = "rejected_by_ministry";

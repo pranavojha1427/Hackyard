@@ -48,16 +48,27 @@ const MINISTRIES = [
 export function AgencyProjectManager({ projects, agency }: { projects: Project[]; agency?: string }) {
   const [form, setForm] = useState<any>(empty);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   const set = (key: string, value: any) => setForm((f: any) => ({ ...f, [key]: value }));
 
   function edit(p: Project) {
+    setIsCreating(false);
     setEditingId(String(p.id));
     setForm({ ...empty, ...p });
     setMessage("");
-    // We can scroll to the bottom where the form appears
+    setTimeout(() => {
+      document.getElementById("modify-form")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  }
+
+  function startCreate() {
+    setEditingId(null);
+    setIsCreating(true);
+    setForm({ ...empty, project_code: `PRJ-${Date.now().toString().slice(-6)}` });
+    setMessage("");
     setTimeout(() => {
       document.getElementById("modify-form")?.scrollIntoView({ behavior: "smooth" });
     }, 100);
@@ -65,6 +76,7 @@ export function AgencyProjectManager({ projects, agency }: { projects: Project[]
 
   function reset() { 
     setEditingId(null); 
+    setIsCreating(false);
     setForm(empty);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -72,14 +84,18 @@ export function AgencyProjectManager({ projects, agency }: { projects: Project[]
   async function submit(e: FormEvent) {
     e.preventDefault(); setLoading(true); setMessage("");
     try {
-      const res = await fetch("/api/agency/projects", {
-        method: "PATCH",
+      const endpoint = "/api/agency/projects";
+      const method = isCreating ? "POST" : "PATCH";
+      const payload = isCreating ? { ...form, agency } : { ...form, projectId: editingId };
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, projectId: editingId }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Request failed");
-      setMessage("Project update saved.");
+      setMessage(isCreating ? "New project added successfully!" : "Project update saved.");
       reset();
       setTimeout(() => window.location.reload(), 600);
     } catch (err: any) { setMessage(err.message); }
@@ -90,9 +106,20 @@ export function AgencyProjectManager({ projects, agency }: { projects: Project[]
     <div className="space-y-8">
       {/* Table section brought to the top */}
       <div className="bg-white border-2 border-slate-200 overflow-hidden shadow-sm">
-        <div className="p-5 border-b border-slate-200 flex justify-between bg-slate-50 items-center">
-          <h3 className="font-mono uppercase font-bold text-slate-800">Projects owned by your agency</h3>
-          <span className="text-xs font-mono text-slate-500 bg-white px-2 py-1 border rounded">{projects.length} PROJECTS</span>
+        <div className="p-5 border-b border-slate-200 flex flex-wrap justify-between bg-slate-50 items-center gap-3">
+          <div>
+            <h3 className="font-mono uppercase font-bold text-slate-800">Projects owned by your agency</h3>
+            <p className="text-xs text-slate-500 font-mono mt-0.5">Manage progress or commission extra projects</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono text-slate-500 bg-white px-2 py-1 border rounded">{projects.length} PROJECTS</span>
+            <button
+              onClick={startCreate}
+              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-mono uppercase font-bold rounded transition-colors shadow-sm"
+            >
+              + Add Extra Project
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -132,8 +159,8 @@ export function AgencyProjectManager({ projects, agency }: { projects: Project[]
         </div>
       </div>
 
-      {/* Editing section (Hidden unless Modify is clicked) */}
-      {editingId && (
+      {/* Form section (Shown when Modify or Add Extra Project is clicked) */}
+      {(editingId || isCreating) && (
         <div id="modify-form" className="bg-white border-2 border-blue-200 shadow-md p-8 rounded-xl animate-[popIn_0.2s_ease-out_forwards]">
           <style>{`
             @keyframes popIn {
@@ -143,12 +170,28 @@ export function AgencyProjectManager({ projects, agency }: { projects: Project[]
           `}</style>
           <div className="flex items-center justify-between gap-3 mb-6 border-b border-slate-100 pb-4">
             <div>
-              <h2 className="font-black text-2xl uppercase text-slate-800">Modify Project Details</h2>
+              <h2 className="font-black text-2xl uppercase text-slate-800">
+                {isCreating ? "Commission Extra Project" : "Modify Project Details"}
+              </h2>
               <p className="text-xs font-mono text-slate-500 mt-1">AGENCY / COMPANY: {agency || "Not assigned"}</p>
             </div>
-            <button onClick={reset} className="text-sm font-mono text-slate-500 hover:text-slate-800 underline">Cancel edit</button>
+            <button onClick={reset} className="text-sm font-mono text-slate-500 hover:text-slate-800 underline">
+              {isCreating ? "Cancel" : "Cancel edit"}
+            </button>
           </div>
           <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {isCreating && (
+              <label className="text-xs font-mono uppercase text-slate-600 flex flex-col gap-1.5">
+                Project Code
+                <input
+                  type="text"
+                  placeholder="e.g. PRJ-998877"
+                  className="w-full border border-slate-300 p-2.5 rounded text-sm font-sans bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                  value={form.project_code ?? ""}
+                  onChange={e => set("project_code", e.target.value)}
+                />
+              </label>
+            )}
             {[
               ["project_name","Project name","text"],
               ["sector","Sector","select"],
@@ -181,7 +224,7 @@ export function AgencyProjectManager({ projects, agency }: { projects: Project[]
             <div className="md:col-span-2 lg:col-span-3 flex items-center justify-end gap-3 pt-4 border-t border-slate-100 mt-2">
               {message && <span className="text-sm font-mono text-green-600 font-bold">{message}</span>}
               <button disabled={loading} className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded text-sm font-bold uppercase transition-colors disabled:opacity-50">
-                <Save size={18}/> {loading ? "Saving..." : "Save changes"}
+                <Save size={18}/> {loading ? "Saving..." : isCreating ? "Commission Project" : "Save changes"}
               </button>
             </div>
           </form>

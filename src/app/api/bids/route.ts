@@ -54,7 +54,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Bidding window (1 week) has closed." }, { status: 400 });
   }
 
-  const existingBid = await db.collection(BIDS_COLLECTION).findOne({ proposalId: body.proposalId, agencyName: session.agency });
+  const bidAmountNum = Number(body.bidAmount);
+  if (!body.bidAmount || isNaN(bidAmountNum) || bidAmountNum <= 0) {
+    return NextResponse.json({ error: "Please enter a valid bid amount (in Crores)." }, { status: 400 });
+  }
+
+  const agencyName = session.agency || session.name;
+  const existingBid = await db.collection(BIDS_COLLECTION).findOne({
+    proposalId: body.proposalId,
+    $or: [{ agencyId: session.id }, { agencyName }]
+  });
   if (existingBid) {
     return NextResponse.json({ error: "You have already placed a bid for this proposal." }, { status: 400 });
   }
@@ -62,9 +71,9 @@ export async function POST(req: Request) {
   const bid = {
     proposalId: body.proposalId,
     agencyId: session.id,
-    agencyName: session.agency || session.name,
-    bidAmount: Number(body.bidAmount),
-    remarks: body.remarks,
+    agencyName,
+    bidAmount: bidAmountNum,
+    remarks: body.remarks || "",
     status: "submitted",
     submittedAt: new Date()
   };

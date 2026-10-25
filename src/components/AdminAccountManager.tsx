@@ -77,7 +77,7 @@ export function AdminAccountManager({ currentUser }: { currentUser?: any }) {
       if (!res.ok) {
         throw new Error(data.error || "Unable to create account.");
       }
-      setSuccessMessage(`Account successfully provisioned for ${form.email}. Temporary credentials are now active for login.`);
+      setSuccessMessage(data.message || `Account credentials updated for ${form.email}. Credentials are now active for login.`);
       setForm({ name: "", email: "", password: "", role: defaultRole, ministry: "", agency: "", state: "", country: "India" });
       await fetchUsers();
     } catch (e: any) { 
@@ -245,6 +245,7 @@ export function AdminAccountManager({ currentUser }: { currentUser?: any }) {
                   <th className="p-3 font-semibold">Role</th>
                   <th className="p-3 font-semibold">Jurisdiction / State</th>
                   <th className="p-3 font-semibold">Date Created</th>
+                  <th className="p-3 font-semibold text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -272,6 +273,28 @@ export function AdminAccountManager({ currentUser }: { currentUser?: any }) {
                     </td>
                     <td className="p-3 text-slate-400">
                       {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "Active"}
+                    </td>
+                    <td className="p-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const roleDisplay = u.role === "state_admin" ? "State Admin" : u.role === "ministry" ? "Ministry" : u.role === "engineer" ? "Engineer" : u.role === "agency" ? "Agency" : "State Admin";
+                          setForm({
+                            name: u.name || "",
+                            email: u.email || "",
+                            password: "",
+                            role: roleDisplay,
+                            ministry: u.ministry || "",
+                            agency: u.agency || "",
+                            state: u.state || "",
+                            country: "India"
+                          });
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                        className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 underline uppercase tracking-wider"
+                      >
+                        Reset / Edit
+                      </button>
                     </td>
                   </tr>
                 ))}

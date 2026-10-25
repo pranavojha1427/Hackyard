@@ -17,7 +17,7 @@ export function WorkflowInbox({ currentUser, agencyRanks }: any) {
     if ((action === "reject" || action === "feedback") && !feedback) return alert("Please provide feedback/reason.");
     
     const pCode = projectCodes[id] || undefined;
-    if (action === "approve" && currentUser.role === "state_admin" && !pCode) {
+    if (action === "approve" && (currentUser.role === "state_admin" || currentUser.role === "admin") && !pCode) {
        // Ask for confirmation if empty, or just let it pass
     }
 
@@ -26,17 +26,17 @@ export function WorkflowInbox({ currentUser, agencyRanks }: any) {
   };
 
   const pending = proposals.filter(p => {
-    if(currentUser.role === "state_admin") return p.status === "pending_admin";
+    if(currentUser.role === "state_admin" || currentUser.role === "admin") return p.status === "pending_admin";
     if(currentUser.role === "ministry") return p.status === "pending_ministry" && (p.ministry?.toLowerCase() === currentUser.ministry?.toLowerCase());
     return false;
   });
 
-  const allRelevant = proposals.filter(p => p.status !== "dismissed" || currentUser.role === "state_admin");
+  const allRelevant = proposals.filter(p => p.status !== "dismissed" || currentUser.role === "state_admin" || currentUser.role === "admin");
 
   return (
     <div className="space-y-6">
       <div className="flex gap-4 border-b pb-2">
-        {(currentUser.role === "state_admin" || currentUser.role === "ministry") && <button className={`font-semibold ${activeTab==="inbox" ? "text-blue-600" : "text-slate-500"}`} onClick={() => setActiveTab("inbox")}>Inbox ({pending.length})</button>}
+        {(currentUser.role === "state_admin" || currentUser.role === "admin" || currentUser.role === "ministry") && <button className={`font-semibold ${activeTab==="inbox" ? "text-blue-600" : "text-slate-500"}`} onClick={() => setActiveTab("inbox")}>Inbox ({pending.length})</button>}
         <button className={`font-semibold ${activeTab==="all" ? "text-blue-600" : "text-slate-500"}`} onClick={() => setActiveTab("all")}>All Proposals / Bidding</button>
       </div>
 
@@ -67,7 +67,7 @@ export function WorkflowInbox({ currentUser, agencyRanks }: any) {
 
             {activeTab === "inbox" && (
               <div className="flex flex-col gap-2 mt-2">
-                {currentUser.role === "state_admin" && (
+                {(currentUser.role === "state_admin" || currentUser.role === "admin") && (
                   <input 
                     placeholder="Assign Project Code (Required for Approval)" 
                     value={projectCodes[p._id] || ""} 
@@ -78,7 +78,7 @@ export function WorkflowInbox({ currentUser, agencyRanks }: any) {
                 <div className="flex items-center gap-2">
                   <input placeholder="Feedback / Reason..." value={feedback} onChange={e=>setFeedback(e.target.value)} className="border p-2 rounded flex-1 text-sm" />
                   <Button onClick={() => {
-                    if(currentUser.role === "state_admin" && !projectCodes[p._id]) return alert("Please assign a Project Code before approving.");
+                    if((currentUser.role === "state_admin" || currentUser.role === "admin") && !projectCodes[p._id]) return alert("Please assign a Project Code before approving.");
                     handleAction(p._id, "approve");
                   }} className="bg-green-600 hover:bg-green-700">Approve</Button>
                   <Button onClick={() => handleAction(p._id, "reject")} variant="destructive">Reject</Button>

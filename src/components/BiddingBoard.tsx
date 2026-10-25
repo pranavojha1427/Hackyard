@@ -15,16 +15,23 @@ export function BiddingBoard({ proposal, currentUser, agencyRanks }: any) {
   const submit = async () => {
     if (!amount) return;
     setLoading(true);
-    const res = await fetch("/api/bids", { method: "POST", body: JSON.stringify({ proposalId: proposal._id, bidAmount: amount, remarks }) });
+    const res = await fetch("/api/bids", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ proposalId: proposal._id, bidAmount: amount, remarks }) });
     setLoading(false);
     const data = await res.json();
     if (data.error) alert(data.error);
-    else { alert("Bid placed!"); load(); }
+    else { alert("Bid placed successfully!"); setAmount(""); setRemarks(""); load(); }
   };
 
   const award = async (bid: any) => {
-    await fetch("/api/proposals", { method: "PUT", body: JSON.stringify({ id: proposal._id, action: "award_bid", agency: bid.agencyName, bidAmount: bid.bidAmount, feedback: `Bid awarded to ${bid.agencyName} for ₹${bid.bidAmount} Cr.` }) });
-    alert("Bid Awarded!");
+    setLoading(true);
+    const res = await fetch("/api/proposals", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: proposal._id, action: "award_bid", agency: bid.agencyName, bidAmount: bid.bidAmount, feedback: `Bid awarded to ${bid.agencyName} for ₹${bid.bidAmount} Cr.` }) });
+    setLoading(false);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || "Failed to award bid.");
+      return;
+    }
+    alert(`Bid Awarded to ${bid.agencyName}! Project created and commissioned.`);
     window.location.reload();
   };
 
@@ -66,7 +73,7 @@ export function BiddingBoard({ proposal, currentUser, agencyRanks }: any) {
               </div>
               <div className="text-right flex items-center gap-4">
                 <div className="font-bold text-lg">₹{b.bidAmount} Cr</div>
-                {!isClosed && <Button size="sm" onClick={() => award(b)}>Award</Button>}
+                <Button size="sm" onClick={() => award(b)} className="bg-indigo-600 hover:bg-indigo-700">Award Contract</Button>
               </div>
             </div>
           ))}

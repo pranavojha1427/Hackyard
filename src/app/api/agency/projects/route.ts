@@ -28,8 +28,29 @@ export async function POST(req: Request) {
   try {
     const session = await requireRole(["agency"]);
     const data = clean(await req.json(), session.agency || "");
-    if (!data.agency || !data.project_code || !data.project_name || !data.sector) return NextResponse.json({ error: "Project code, name and sector are required." }, { status: 400 });
+    if (!data.project_code) data.project_code = `PRJ-${Date.now().toString().slice(-6)}`;
+    if (!data.agency || !data.project_name || !data.sector) return NextResponse.json({ error: "Project name and sector are required." }, { status: 400 });
     const id = await createMongoProject(data, session.email);
+
+    try {
+      const supabase = await createClient();
+      await supabase.from("projects").insert([{
+        project_code: data.project_code,
+        project_name: data.project_name,
+        sector: data.sector,
+        hml_category: data.sector,
+        ministry: data.ministry || null,
+        agency: data.agency,
+        state: data.state || "Unknown",
+        original_cost: data.original_cost || 0,
+        revised_cost: data.revised_cost || data.original_cost || 0,
+        cumulative_expenditure: data.cumulative_expenditure || 0,
+        physical_progress: data.physical_progress || 0
+      }]);
+    } catch (e) {
+      console.warn("Supabase project backup warning:", e);
+    }
+
     return NextResponse.json({ ok: true, id }, { status: 201 });
   } catch (error: any) {
     const status = error?.message === "FORBIDDEN" ? 403 : error?.message === "UNAUTHORIZED" ? 401 : 500;
@@ -81,8 +102,8 @@ export async function PATCH(req: Request) {
     if (!project || project.agency !== session.agency) return NextResponse.json({ error: "You can only modify projects owned by your agency/company." }, { status: 403 });
 
     const overridesColl = client.db(DB_NAME).collection("project_overrides");
-    const existingOverride = await overridesColl.findOne({ project_id: projectId });
-    const currentProgress = existingOverride?.physical_progress ?? project?.physical_progress ?? 0;
+    const existingOverride = await overridesColl.findOne({ projectId: String(projectId) });
+    const currentProgress = existingOverride?.changes?.physical_progress ?? existingOverride?.physical_progress ?? project?.physical_progress ?? 0;
 
     const changes = clean(body, session.agency || "");
     delete (changes as any).agency;

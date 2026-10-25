@@ -43,10 +43,20 @@ export function ProposalForm({ currentUser, onSuccess }: any) {
 
   const submit = async (e: any) => {
     e.preventDefault(); setLoading(true);
-    await fetch("/api/proposals", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(form) });
-    setLoading(false);
-    alert("Proposal submitted successfully!");
-    if(onSuccess) onSuccess();
+    try {
+      const res = await fetch("/api/proposals", { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(form) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data.error || "Failed to submit proposal.");
+      } else {
+        alert("Proposal submitted successfully!");
+        if(onSuccess) onSuccess();
+      }
+    } catch {
+      alert("Failed to connect to the server.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

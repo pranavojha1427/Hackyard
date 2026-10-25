@@ -46,12 +46,8 @@ export async function POST(req: Request) {
 
     // Check if user already exists
     const existing = await findUserByEmail(email);
-    if (existing) {
-      return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
-    }
-
     const hashedPassword = await bcrypt.hash(password, 10);
-    const userId = `user_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const userId = existing?._id ? String(existing._id) : `user_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     
     const newUser: ProvisionedUser = {
       _id: userId,
@@ -60,7 +56,7 @@ export async function POST(req: Request) {
       passwordHash: hashedPassword,
       role,
       active: true,
-      createdAt: new Date().toISOString()
+      createdAt: (existing as any)?.createdAt || new Date().toISOString()
     };
     if (ministry) newUser.ministry = ministry;
     if (agency) newUser.agency = agency;
@@ -75,7 +71,11 @@ export async function POST(req: Request) {
       const mongoPromise = (async () => {
         const client = await clientPromise;
         const users = client.db(DB_NAME).collection(USERS_COLLECTION);
-        await users.insertOne({ ...newUser, createdAt: new Date() } as any);
+        await users.updateOne(
+          { email },
+          { $set: { ...newUser, updatedAt: new Date() } },
+          { upsert: true }
+        );
       })();
       const mongoTimeout = new Promise((resolve) => setTimeout(resolve, 2000));
       await Promise.race([mongoPromise, mongoTimeout]);
@@ -85,7 +85,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      message: `Account provisioned successfully for ${email}.` 
+      message: existing 
+        ? `Account credentials for ${email} updated successfully.` 
+        : `Account provisioned successfully for ${email}.`
     });
   } catch (e: any) {
     console.error("ADMIN USERS ERROR:", e);

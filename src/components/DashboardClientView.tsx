@@ -414,6 +414,7 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
                 tabs.push(
                   { id: 'dashboard', label: 'Priority Engine' },
                   { id: 'hotspots', label: 'Demand Hotspots' },
+                  { id: 'proposals', label: 'Bidding / Proposals' },
                   { id: 'complaints', label: 'Citizen Grievances' },
                   { id: 'gatekeeper', label: 'PDF Gatekeeper (Parity)' },
                   { id: 'accounts', label: 'Account Provisioning' }
