@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Mic, Send, MapPin, CheckCircle, Activity, AlertCircle, Square, Phone } from "lucide-react";
 import Link from "next/link";
+import { ALL_MINISTRIES } from "@/lib/constants";
 
 export const ALL_INDIAN_LANGUAGES = [
   { code: "en-IN", name: "English (India)", native: "English" },
@@ -28,65 +29,6 @@ export const ALL_INDIAN_LANGUAGES = [
   { code: "doi-IN", name: "डोगरी (Dogri)", native: "डोगरी" },
   { code: "sd-IN", name: "سنڌي / सिंधी (Sindhi)", native: "سنڌي" },
   { code: "mni-IN", name: "ꯃꯤꯇꯩꯂꯣꯟ / Manipuri", native: "ꯃꯤꯇꯩꯂꯣꯟ" }
-];
-
-export const ALL_GOI_MINISTRIES = [
-  "Ministry of Agriculture & Farmers Welfare",
-  "Ministry of Ayush",
-  "Ministry of Chemicals and Fertilizers",
-  "Ministry of Civil Aviation",
-  "Ministry of Coal",
-  "Ministry of Commerce and Industry",
-  "Ministry of Communications",
-  "Ministry of Consumer Affairs, Food and Public Distribution",
-  "Ministry of Cooperation",
-  "Ministry of Corporate Affairs",
-  "Ministry of Culture",
-  "Ministry of Defence",
-  "Ministry of Development of North Eastern Region (DoNER)",
-  "Ministry of Earth Sciences",
-  "Ministry of Education",
-  "Ministry of Electronics and Information Technology (MeitY)",
-  "Ministry of Environment, Forest and Climate Change",
-  "Ministry of External Affairs",
-  "Ministry of Finance",
-  "Ministry of Fisheries, Animal Husbandry and Dairying",
-  "Ministry of Food Processing Industries",
-  "Ministry of Health & Family Welfare",
-  "Ministry of Heavy Industries",
-  "Ministry of Home Affairs",
-  "Ministry of Housing & Urban Affairs",
-  "Ministry of Information and Broadcasting",
-  "Ministry of Jal Shakti (Water Resources, River Development & GR)",
-  "Ministry of Jal Shakti (Drinking Water & Sanitation)",
-  "Ministry of Labour and Employment",
-  "Ministry of Law and Justice",
-  "Ministry of Micro, Small and Medium Enterprises (MSME)",
-  "Ministry of Mines",
-  "Ministry of Minority Affairs",
-  "Ministry of New and Renewable Energy",
-  "Ministry of Panchayati Raj",
-  "Ministry of Parliamentary Affairs",
-  "Ministry of Personnel, Public Grievances and Pensions",
-  "Ministry of Petroleum & Natural Gas",
-  "Ministry of Planning",
-  "Ministry of Ports, Shipping and Waterways",
-  "Ministry of Power",
-  "Ministry of Railways",
-  "Ministry of Road Transport & Highways",
-  "Ministry of Rural Development",
-  "Ministry of Science and Technology",
-  "Ministry of Skill Development and Entrepreneurship",
-  "Ministry of Social Justice and Empowerment",
-  "Ministry of Statistics and Programme Implementation (MoSPI)",
-  "Ministry of Steel",
-  "Ministry of Textiles",
-  "Ministry of Tourism",
-  "Ministry of Tribal Affairs",
-  "Ministry of Women and Child Development",
-  "Ministry of Youth Affairs and Sports",
-  "Department of Atomic Energy",
-  "Department of Space"
 ];
 
 export default function CitizenPortal() {
@@ -512,10 +454,10 @@ export default function CitizenPortal() {
                   />
                 </div>
 
-                {/* Target Ministry / Department (ALL MINISTRIES - NO "OTHERS") */}
+                {/* Target Ministry / Department (Authoritative 19 Ministries - Exactly matching Dashboard) */}
                 <div>
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
-                    Target Ministry / Department ({ALL_GOI_MINISTRIES.length} Central Ministries)
+                    Target Ministry / Department (All Ministries ({ALL_MINISTRIES.length}))
                   </label>
                   <select 
                     value={ministry}
@@ -524,7 +466,7 @@ export default function CitizenPortal() {
                     required
                   >
                     <option value="" disabled>Select Target Ministry / Department</option>
-                    {ALL_GOI_MINISTRIES.map(min => (
+                    {ALL_MINISTRIES.map(min => (
                       <option key={min} value={min}>{min}</option>
                     ))}
                   </select>
