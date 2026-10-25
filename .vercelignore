@@ -4,12 +4,6 @@ predictive_service/
 *.sql
 *.py
 *.txt
-*.json
-!package.json
-!package-lock.json
-!tsconfig.json
-!components.json
-!skills-lock.json
 node_modules/
 .git/
 .gemini/
