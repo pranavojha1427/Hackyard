@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Loader2, MapPin, AlertCircle, ShieldAlert, CheckCircle2, ChevronRight, FileText } from "lucide-react";
 import dynamic from "next/dynamic";
+import { extractMinistry } from "@/lib/ministry-extractor";
 
 const MapPicker = dynamic(() => import("@/components/InspectorMapPicker"), {
   ssr: false,
@@ -152,13 +153,10 @@ export default function AdminHotspots({ currentUser }: { currentUser?: any }) {
   };
 
   const handleRaiseProject = async (hotspot: any) => {
-    // The Ministry raises a project from the Field Report
-    // It creates a MongoDB Proposal that goes to Admin
-    const project_title = prompt("Enter Project Title for this Initiative:");
+    // Both State Admin and Ministry can escalate a Field Report into the formal Bidding System
+    const defaultTitle = hotspot.proposed_title || `${hotspot.infrastructure_category} Initiative - ${hotspot.state}`;
+    const project_title = prompt("Enter Project Title for this Initiative:", defaultTitle);
     if (!project_title) return;
-
-    // Fetch the project that was temporarily put into postgres by the inspector
-    const { data: pData } = await supabase.from('projects').select('*').eq('hml_category', hotspot.infrastructure_category).eq('state', hotspot.state).order('created_at', { ascending: false }).limit(1);
 
     const description = hotspot.inspector_report || "Raised from Field Report";
     const defaultAmount = hotspot.preferred_amount ? String(hotspot.preferred_amount) : "50";
@@ -171,9 +169,12 @@ export default function AdminHotspots({ currentUser }: { currentUser?: any }) {
     if (!amountStr) return;
     const amount = parseFloat(amountStr) || 0;
 
-    // Append map coordinates to description so the Admin can see exactly where it was pinned
+    // Append map coordinates to description so bidders and admins can see exactly where it was pinned
     const coordsStr = hotspot.exact_lat && hotspot.exact_lng ? `\n\n[Map Pinned Coordinates: Lat ${Number(hotspot.exact_lat).toFixed(6)}, Lng ${Number(hotspot.exact_lng).toFixed(6)}]` : "";
     const fullDetails = description + coordsStr;
+
+    // Infer ministry for inter-ministerial workflow
+    const ministry = extractMinistry(hotspot.infrastructure_category, "", project_title);
 
     const res = await fetch("/api/proposals", {
         method: "POST",
@@ -183,13 +184,14 @@ export default function AdminHotspots({ currentUser }: { currentUser?: any }) {
             details: fullDetails,
             expected_expenditure: amount,
             sector: hotspot.infrastructure_category,
+            ministry: ministry,
             state: hotspot.state,
             hotspot_id: hotspot.id
         })
     });
 
     if (res.ok) {
-        alert("Project Proposal sent to Admin for Bidding Verification!");
+        alert("Project Proposal forwarded to Bidding & Procurement System!");
         // Update hotspot status
         await supabase.from('demand_hotspots').update({ status: 'project_raised' }).eq('id', hotspot.id);
         fetchData();
@@ -347,11 +349,18 @@ export default function AdminHotspots({ currentUser }: { currentUser?: any }) {
                         )}
                     </div>
 
-                    {currentUser?.role === 'ministry' && h.status === 'project_proposed' && (
-                        <div className="mt-6 pt-4 border-t border-slate-100">
-                            <button onClick={() => handleRaiseProject(h)} className="w-full py-3 bg-indigo-600 text-white font-semibold rounded hover:bg-indigo-700 transition flex justify-center items-center">
-                                Raise Project Proposal
+                    {(currentUser?.role === 'ministry' || currentUser?.role === 'state_admin' || currentUser?.role === 'admin') && h.status === 'project_proposed' && (
+                        <div className="mt-6 pt-4 border-t border-slate-100 flex flex-col gap-1.5">
+                            <button onClick={() => handleRaiseProject(h)} className="w-full py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition flex justify-center items-center shadow-xs">
+                                <FileText className="w-4 h-4 mr-2" /> Forward to Bidding System (Raise Project Proposal)
                             </button>
+                            <p className="text-[11px] text-center text-slate-500">Initiates formal procurement and agency competitive bidding</p>
+                        </div>
+                    )}
+                    {h.status === 'project_raised' && (
+                        <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-indigo-700 bg-indigo-50/80 px-3 py-2 rounded-lg font-medium">
+                            <span>🚀 Forwarded to Bidding & Procurement</span>
+                            <span className="font-bold uppercase text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded">Tendering</span>
                         </div>
                     )}
                  </div>

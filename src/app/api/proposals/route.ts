@@ -5,6 +5,8 @@ import { getSession } from "@/lib/auth";
 import { ObjectId } from "mongodb";
 import { createMongoProject } from "@/lib/project-store";
 
+import { extractMinistry } from "@/lib/ministry-extractor";
+
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -18,7 +20,7 @@ export async function GET() {
   } else if (session.role === "agency" && session.agency) {
     query = { $or: [{ agency: session.agency }, { status: "bidding_open" }] };
   } else if (session.role === "state_admin" && session.state) {
-    query = { state: session.state };
+    query = { state: new RegExp(`^${session.state}$`, "i") };
   } else if (session.role !== "admin" && session.role !== "state_admin") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -35,14 +37,18 @@ export async function POST(req: Request) {
   const client = await clientPromise;
   const db = client.db(DB_NAME);
 
+  const resolvedMinistry = session.ministry || body.ministry || extractMinistry(body.sector, body.agency, body.project_name);
+  const resolvedState = body.state || session.state || "National";
+
   const proposal = {
     ...body,
+    state: resolvedState,
+    ministry: resolvedMinistry,
     type: session.role === "agency" ? "agency_proposal" : "ministry_proposal",
-    status: "pending_admin", // both start by going to admin
+    status: "pending_admin", // both start by going to admin / state admin
     createdBy: session.id,
     creatorRole: session.role,
     creatorName: session.name,
-    ministry: session.ministry || body.ministry,
     agency: session.agency || body.agency,
     createdAt: new Date(),
     feedback: []

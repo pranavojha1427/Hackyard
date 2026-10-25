@@ -1,9 +1,11 @@
 import rawSeedProjects from "../../projects_seed.json";
+import { extractMinistry } from "./ministry-extractor";
 
 export const FALLBACK_PROJECTS: any[] = Array.isArray(rawSeedProjects)
   ? (rawSeedProjects as any[]).map((p, index) => ({
       ...p,
       id: p.id || p.project_code || index + 1,
+      ministry: extractMinistry(p.sector, p.agency, p.project_name, p.ministry),
       original_cost: Number(p.original_cost) || 0,
       revised_cost: Number(p.revised_cost ?? p.original_cost) || 0,
       cumulative_expenditure: Number(p.cumulative_expenditure) || 0,

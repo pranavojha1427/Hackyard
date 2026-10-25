@@ -54,9 +54,10 @@ export default async function DashboardPage() {
   let overridesData: any[] = [];
   let kpi: any = null;
 
+  const isFiltered = Object.keys(matchFilter).length > 0;
+
   try {
     const supabase = await createClient();
-    const isFiltered = Object.keys(matchFilter).length > 0;
 
     // 1. Authoritative Indian infrastructure projects loaded directly from projects_seed.json
     let seedProjectsList = [...FALLBACK_PROJECTS];
@@ -66,10 +67,12 @@ export default async function DashboardPage() {
         seedProjectsList = seedProjectsList.filter(p => (p.state || "").toLowerCase().includes(targetState));
       }
       if (matchFilter.ministry) {
-        seedProjectsList = seedProjectsList.filter(p => p.ministry === matchFilter.ministry);
+        const targetMinistry = matchFilter.ministry.toLowerCase();
+        seedProjectsList = seedProjectsList.filter(p => (p.ministry || "").toLowerCase() === targetMinistry);
       }
       if (matchFilter.agency) {
-        seedProjectsList = seedProjectsList.filter(p => p.agency === matchFilter.agency);
+        const targetAgency = matchFilter.agency.toLowerCase();
+        seedProjectsList = seedProjectsList.filter(p => (p.agency || "").toLowerCase() === targetAgency);
       }
     }
     allProjectsRaw = seedProjectsList;
@@ -135,8 +138,8 @@ export default async function DashboardPage() {
     console.warn("Database initialization/fetch warning:", err);
   }
 
-  // If remote database returned no projects or is offline, use resilient fallback data
-  if (allProjectsRaw.length === 0 && mongoAgencyProjects.length === 0) {
+  // If remote database returned no projects or is offline, use resilient fallback data (only when unfiltered)
+  if (allProjectsRaw.length === 0 && mongoAgencyProjects.length === 0 && !isFiltered) {
     allProjectsRaw = [...FALLBACK_PROJECTS];
   }
   if (agencyData.length === 0) {

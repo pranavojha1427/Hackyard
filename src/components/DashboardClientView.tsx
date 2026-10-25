@@ -18,6 +18,7 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { SessionUser } from "@/lib/auth";
 import { I18N } from "@/lib/i18n";
 import { extractAgency, FALLBACK_AGENCY_RANKINGS } from "@/lib/agency-extractor";
+import { ALL_MINISTRIES, extractMinistry } from "@/lib/ministry-extractor";
 import { 
   Layers, 
   Landmark, 
@@ -72,29 +73,6 @@ type Props = {
   currentUser?: SessionUser;
 };
 
-const ALL_MINISTRIES = [
-  "Department for Promotion of Industry & Internal Trade",
-  "Department of Higher Education",
-  "Department of Sports",
-  "Department of Telecommunications",
-  "Department of Water Resources, River Development & GR",
-  "Ministry of Chemicals and Fertilizers",
-  "Ministry of Civil Aviation",
-  "Ministry of Coal",
-  "Ministry of Health & Family Welfare",
-  "Ministry of Housing & Urban Affairs",
-  "Ministry of Labour and Employment",
-  "Ministry of Mines",
-  "Ministry of New & Renewable Energy",
-  "Ministry of Petroleum & Natural Gas",
-  "Ministry of Ports, Shipping and Waterways",
-  "Ministry of Power",
-  "Ministry of Railways",
-  "Ministry of Road Transport & Highways",
-  "Ministry of Steel"
-];
-
-
 export function DashboardClientView({ allProjects, agencyData, benchResData, alertsData, kpi, currentUser }: Props) {
   const [language, setLanguage] = useState<string>("en");
   const t = I18N[language] || I18N.en;
@@ -112,32 +90,11 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  const getMinistry = (sector: string, agency: string, project_name: string, cost: number, assignedMinistry: string | null) => {
-    if (assignedMinistry) return assignedMinistry;
-    const s = (sector || "").toLowerCase();
-    if (s.includes("road") || s.includes("highway")) return "Ministry of Road Transport & Highways";
-    if (s.includes("rail")) return "Ministry of Railways";
-    if (s.includes("power") || s.includes("energy")) return "Ministry of Power";
-    if (s.includes("petroleum") || s.includes("oil") || s.includes("gas")) return "Ministry of Petroleum & Natural Gas";
-    if (s.includes("coal")) return "Ministry of Coal";
-    if (s.includes("water") || s.includes("river")) return "Department of Water Resources, River Development & GR";
-    if (s.includes("telecom") || s.includes("communication")) return "Department of Telecommunications";
-    if (s.includes("civil") || s.includes("aviation") || s.includes("airport")) return "Ministry of Civil Aviation";
-    if (s.includes("health") || s.includes("hospital")) return "Ministry of Health & Family Welfare";
-    if (s.includes("steel")) return "Ministry of Steel";
-    if (s.includes("mine") || s.includes("mining")) return "Ministry of Mines";
-    if (s.includes("urban") || s.includes("housing")) return "Ministry of Housing & Urban Affairs";
-    if (s.includes("port") || s.includes("shipping")) return "Ministry of Ports, Shipping and Waterways";
-    if (s.includes("chemical") || s.includes("fertilizer")) return "Ministry of Chemicals and Fertilizers";
-    if (s.includes("education")) return "Department of Higher Education";
-    if (s.includes("sport")) return "Department of Sports";
-    if (s.includes("renewable")) return "Ministry of New & Renewable Energy";
-    if (s.includes("industry")) return "Department for Promotion of Industry & Internal Trade";
-    return "Other";
-  };
-
   const projectsWithMinistry = useMemo(() => {
-    return allProjects.map(p => ({ ...p, ministry: getMinistry(p.sector, p.agency, p.project_name, p.original_cost, p.ministry) }));
+    return allProjects.map(p => ({
+      ...p,
+      ministry: extractMinistry(p.sector, p.agency, p.project_name, p.ministry)
+    }));
   }, [allProjects]);
 
   // Derive unique options for dropdowns
