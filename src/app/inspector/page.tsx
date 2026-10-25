@@ -147,7 +147,7 @@ export default function InspectorPortal() {
       localStorage.setItem('inspector_id', matched.id);
       await fetchInspectorData(matched.id);
     } else {
-      setLoginError("Invalid phone number or password. Try the demo credentials below.");
+      setLoginError("Invalid phone number or password. Please check your credentials.");
     }
     setLoading(false);
   };
@@ -157,12 +157,6 @@ export default function InspectorPortal() {
     setInspector(null);
     setHotspots([]);
     setSelectedHotspot(null);
-  };
-
-  const autofill = (p: string, pass: string) => {
-    setPhone(p);
-    setPassword(pass);
-    setLoginError("");
   };
 
   const submitReport = async (e: React.FormEvent) => {
@@ -259,49 +253,6 @@ export default function InspectorPortal() {
                 Secure Inspector Login
               </button>
             </form>
-
-            <div className="pt-5 border-t border-slate-200">
-              <p className="text-xs font-semibold text-slate-500 mb-2.5 uppercase tracking-wider text-center">
-                Demo Inspector Credentials (Click to Autofill)
-              </p>
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => autofill("9239663292", "password@123")}
-                  className="w-full text-left p-3 rounded-lg border border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 transition flex items-center justify-between group"
-                >
-                  <div>
-                    <div className="text-xs font-bold text-slate-800 group-hover:text-indigo-900">
-                      Pranav Ojha (West Bengal Inspector)
-                    </div>
-                    <div className="text-[11px] text-slate-500 font-mono">
-                      Phone: 9239663292 | Pass: password@123
-                    </div>
-                  </div>
-                  <span className="text-xs text-indigo-600 font-semibold px-2 py-1 bg-white group-hover:bg-indigo-100 rounded border border-slate-200">
-                    Autofill
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => autofill("9876543210", "inspector123")}
-                  className="w-full text-left p-3 rounded-lg border border-slate-200 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-300 transition flex items-center justify-between group"
-                >
-                  <div>
-                    <div className="text-xs font-bold text-slate-800 group-hover:text-indigo-900">
-                      Senior Inspector Sharma (National)
-                    </div>
-                    <div className="text-[11px] text-slate-500 font-mono">
-                      Phone: 9876543210 | Pass: inspector123
-                    </div>
-                  </div>
-                  <span className="text-xs text-indigo-600 font-semibold px-2 py-1 bg-white group-hover:bg-indigo-100 rounded border border-slate-200">
-                    Autofill
-                  </span>
-                </button>
-              </div>
-            </div>
 
             <div className="text-center pt-2">
               <Link href="/" className="text-xs text-slate-500 hover:text-indigo-600 transition">
