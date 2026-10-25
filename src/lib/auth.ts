@@ -79,7 +79,7 @@ export async function requireRole(allowed: Role[]) {
 }
 
 
-const FALLBACK_USERS = [
+export const FALLBACK_USERS = [
   {
     _id: "6aa55fa93a0951c1ad2fcae0",
     email: "admin@pragatipulse.gov.in",
@@ -153,30 +153,27 @@ const FALLBACK_USERS = [
     name: "Prabhat Singh",
     passwordHash: "$2b$12$nH6Xga9zbgBKzZ4CJv80K.bCVnOuZ3tZNYfb.3P17qITq69gkDdAm",
     role: "ministry",
-    ministry: "Ministry of New and Renewable Energy",
-    state: "West Bengal",
+    ministry: "Ministry of Road Transport & Highways",
     country: "India",
     active: true
   },
   {
     _id: "6ab7828f15ed9f610af0f296",
-    name: "Ministry of Coal",
+    name: "Pranav Ojha",
     email: "coal@pragatipulse.gov.in",
     passwordHash: "$2b$10$PUVgmAImf08PFzsWoEs/nuJEdBLMf4i6/SGEDvd4/8DGWBWv5lAUS",
     role: "ministry",
     ministry: "Ministry of Coal",
-    state: "West Bengal",
     country: "India",
     active: true
   },
   {
     _id: "6abd0cb00dc1d8d4969757e8",
-    name: "MoRTH Officer",
+    name: "Shrabasti Ghosh",
     email: "road@pragatipulse.gov.in",
     passwordHash: "$2b$10$Oj1HvTJrMiWV4qShZ1dFZ.b9ujpenkXn/wIFdTlxn5tDPztl0Uif.",
     role: "ministry",
     ministry: "Ministry of Road Transport & Highways",
-    state: "West Bengal",
     country: "India",
     active: true
   },
@@ -197,18 +194,16 @@ const FALLBACK_USERS = [
     passwordHash: "$2b$10$PUVgmAImf08PFzsWoEs/nuJEdBLMf4i6/SGEDvd4/8DGWBWv5lAUS",
     role: "ministry",
     ministry: "Department for Promotion of Industry & Internal Trade",
-    state: "West Bengal",
     country: "India",
     active: true
   },
   {
     _id: "6aa648ac003969a20a1acb14",
-    name: "Water Resources Dept",
+    name: "Shrabasti Ghosh",
     email: "shrabasti@gmail.com",
     passwordHash: "$2b$10$PUVgmAImf08PFzsWoEs/nuJEdBLMf4i6/SGEDvd4/8DGWBWv5lAUS",
     role: "ministry",
     ministry: "Department of Water Resources, River Development & GR",
-    state: "West Bengal",
     country: "India",
     active: true
   }

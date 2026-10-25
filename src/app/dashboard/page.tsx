@@ -40,7 +40,6 @@ export default async function DashboardPage() {
   const matchFilter: any = {};
   if (session?.role === "ministry") {
     if (session.ministry) matchFilter.ministry = session.ministry;
-    if (session.state) matchFilter.state = session.state;
   } else if (session?.role === "state_admin") {
     if (session.state) matchFilter.state = session.state;
   } else if (session?.role === "agency" || session?.role === "engineer") {
@@ -160,7 +159,7 @@ export default async function DashboardPage() {
   const allProjects = [
     ...applyProjectOverrides(baseProjects, overrides),
     ...(mongoAgencyProjects || [])
-      .filter((p: any) => !session || session?.role === "admin" || session?.role === "user" || (session?.role === "state_admin" && (!session?.state || p.state === session?.state)) || (session?.role === "ministry" && (!session?.ministry || p.ministry?.toLowerCase() === session?.ministry?.toLowerCase()) && (session?.state ? p.state === session?.state : true)) || ((session?.role === "engineer" || session?.role === "agency") && p.agency === session?.agency))
+      .filter((p: any) => !session || session?.role === "admin" || session?.role === "user" || (session?.role === "state_admin" && (!session?.state || p.state === session?.state)) || (session?.role === "ministry" && (!session?.ministry || p.ministry?.toLowerCase() === session?.ministry?.toLowerCase())) || ((session?.role === "engineer" || session?.role === "agency") && p.agency === session?.agency))
       .map((p: any) => { const { _id, ...rest } = p as any; return { ...rest, id: _id.toString(), _source: "mongo" }; }),
   ];
 

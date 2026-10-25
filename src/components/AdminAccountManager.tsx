@@ -63,8 +63,8 @@ export function AdminAccountManager({ currentUser }: { currentUser?: any }) {
     setErrorMessage("");
     
     const payload = { ...form, country: "India" };
-    if (isStateAdmin && payload.role === "Ministry") {
-        payload.state = currentUser.state;
+    if (payload.role === "Ministry") {
+      delete (payload as any).state;
     }
 
     try {
@@ -206,10 +206,11 @@ export function AdminAccountManager({ currentUser }: { currentUser?: any }) {
             </div>
           )}
 
-          {form.role === "Ministry" && isStateAdmin && (
-              <div className="col-span-1 md:col-span-2 mt-1 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-800 flex items-center">
-                  This ministry account will automatically be tied to your state: <strong>&nbsp;{currentUser.state}</strong>.
-              </div>
+          {form.role === "Ministry" && (
+            <div className="col-span-1 md:col-span-2 mt-1 p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-800 flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>Central Union Ministry accounts monitor projects across <strong>All India (National)</strong> jurisdiction.</span>
+            </div>
           )}
 
           <div className="col-span-1 md:col-span-2 pt-2">
@@ -259,16 +260,20 @@ export function AdminAccountManager({ currentUser }: { currentUser?: any }) {
                       </span>
                     </td>
                     <td className="p-3 text-slate-600">
-                      {u.state ? (
+                      {u.role === "ministry" ? (
+                        <span className="inline-flex items-center gap-1 font-semibold text-indigo-700">
+                          <Building2 className="w-3 h-3 text-indigo-500" /> {u.ministry || "Central Ministry"} (National)
+                        </span>
+                      ) : u.state ? (
                         <span className="inline-flex items-center gap-1">
                           <MapPin className="w-3 h-3 text-rose-500" /> {u.state}
                         </span>
-                      ) : u.ministry ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Building2 className="w-3 h-3 text-indigo-500" /> {u.ministry}
+                      ) : u.agency ? (
+                        <span className="inline-flex items-center gap-1 text-slate-700">
+                          <Building2 className="w-3 h-3 text-slate-400" /> {u.agency}
                         </span>
                       ) : (
-                        "National"
+                        "All India (National)"
                       )}
                     </td>
                     <td className="p-3 text-slate-400">
