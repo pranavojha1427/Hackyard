@@ -56,3 +56,4 @@ verify_db.py
 
 .vercel
 .env*
+.pragatipulse-data/
