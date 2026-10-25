@@ -266,17 +266,32 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
       }
       const data = agencyMap.get(ag);
       data.total_projects += 1;
-      data.sum_cost_overrun += (p.costOverrunPercent || 0);
-      
+
+      const origCost = Number(p.original_cost) || 0;
+      const revCost = Number(p.revised_cost ?? p.original_cost) || origCost;
+      const costEscalation = revCost - origCost;
+      const costOverrunPercent = origCost > 0 ? (costEscalation / origCost) * 100 : 0;
+      data.sum_cost_overrun += Math.max(0, costOverrunPercent);
+
+      const exp = Number(p.cumulative_expenditure) || 0;
+      const finProgress = revCost > 0 ? (exp / revCost) * 100 : (origCost > 0 ? (exp / origCost) * 100 : 0);
+      const physProgress = Number(p.physical_progress) || 0;
+
       let isDelayed = false;
       if (p.revised_doc && p.original_doc && new Date(p.revised_doc) > new Date(p.original_doc)) {
         isDelayed = true;
       } else if (p.status === "Delayed" || p.contractor_delay || p.land_acquisition_issue || p.forest_clearance_issue) {
         isDelayed = true;
-      } else if ((p.costOverrunPercent || 0) > 15 || ((p.physical_progress || 0) < 40 && (p.financialProgress || 0) > 60)) {
+      } else if (costOverrunPercent > 5) {
+        isDelayed = true;
+      } else if (finProgress > physProgress + 15) {
+        isDelayed = true;
+      } else if (physProgress < 40 && finProgress > 50) {
+        isDelayed = true;
+      } else if (p.delay_months && p.delay_months > 0) {
         isDelayed = true;
       }
-      
+
       if (isDelayed) {
         data.delayed_project_count += 1;
       }
@@ -287,9 +302,9 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
       data.delay_frequency_pct = data.total_projects > 0 ? (data.delayed_project_count / data.total_projects) * 100 : 0;
       data.avg_cost_overrun_pct = data.total_projects > 0 ? data.sum_cost_overrun / data.total_projects : 0;
       
-      // Round to 2 decimal places
-      data.delay_frequency_pct = Math.round(data.delay_frequency_pct * 100) / 100;
-      data.avg_cost_overrun_pct = Math.round(data.avg_cost_overrun_pct * 100) / 100;
+      // Round to 1 decimal place
+      data.delay_frequency_pct = Math.round(data.delay_frequency_pct * 10) / 10;
+      data.avg_cost_overrun_pct = Math.round(data.avg_cost_overrun_pct * 10) / 10;
       
       results.push(data);
     }
