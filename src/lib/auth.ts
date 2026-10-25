@@ -204,17 +204,34 @@ const FALLBACK_USERS = [
   }
 ];
 
+import { findProvisionedUserByEmail } from "./user-store";
+
 export async function findUserByEmail(email: string) {
   const normalizedEmail = email.toLowerCase().trim();
+
+  // 1. Check persistent provisioned users store
+  const provisioned = findProvisionedUserByEmail(normalizedEmail);
+  if (provisioned) {
+    return provisioned;
+  }
+
+  // 2. Check static fallback demo users
   const fallback = FALLBACK_USERS.find(u => u.email === normalizedEmail);
   if (fallback) {
     return fallback;
   }
+
+  // 3. Attempt MongoDB lookup with safe timeout
   try {
-    const client = await clientPromise;
-    const user = await client.db(DB_NAME).collection(USERS_COLLECTION).findOne({ email: normalizedEmail });
-    return user || fallback;
+    const mongoPromise = (async () => {
+      const client = await clientPromise;
+      return await client.db(DB_NAME).collection(USERS_COLLECTION).findOne({ email: normalizedEmail });
+    })();
+
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 2000));
+    const user = (await Promise.race([mongoPromise, timeoutPromise])) as any;
+    return user || null;
   } catch (e) {
-    return fallback;
+    return null;
   }
 }
