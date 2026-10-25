@@ -6,8 +6,15 @@ import { getOrCreateAgent37Instance, sendAgent37Turn, getAgent37Key } from "@/li
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
-    if (!session) return NextResponse.json({ response: "Unauthorized" }, { status: 401 });
+    const rawSession = await getSession();
+    // Allow public/guest citizen queries across the national infrastructure portfolio
+    const session = rawSession || {
+      name: "Guest Citizen",
+      role: "user",
+      agency: undefined,
+      ministry: undefined,
+      state: undefined,
+    };
 
     const { message, sessionId } = await req.json();
     if (!message || typeof message !== "string") {
@@ -130,13 +137,15 @@ export async function POST(req: Request) {
     // 6. Dynamic RBAC Prompt
     const roleNotice = session.role === 'admin' 
       ? 'You have full unrestricted national clearance to all MoSPI data.' 
+      : session.role === 'user' || !rawSession
+      ? 'Public access mode: User is an interested citizen exploring the national project portfolio.'
       : `Strict RBAC enforced: user is scoped to their specific ${session.role} domain (${session.state || session.agency || session.ministry}).`;
 
     const systemPrompt = `You are the PragatiPulse AI Project Intelligence Assistant, powered by Agent 37 and MoSPI (Ministry of Statistics and Programme Implementation).
 Domain Guidelines:
 - All monetary values represent INR Crores (₹ Cr).
 - Data source: Authoritative Indian Infrastructure Portfolio (Harmonized Master List).
-- Current user: ${session.name} (Role: ${session.role.toUpperCase()}, Org: ${session.agency || session.ministry || session.state || 'National Government'}).
+- Current user: ${session.name} (Role: ${session.role.toUpperCase()}, Org: ${session.agency || session.ministry || session.state || 'Citizen Access'}).
 - ${roleNotice}
 
 Total Accessible Portfolio: ${allProjects.length} Indian projects, Original Cost: ₹${totalOriginal.toFixed(0)} Cr, Revised Cost: ₹${totalRevised.toFixed(0)} Cr, Cumulative Expenditure: ₹${totalExpenditure.toFixed(0)} Cr.
