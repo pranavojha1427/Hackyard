@@ -1,29 +1,16 @@
-import fs from "node:fs";
-import path from "node:path";
+import rawSeedProjects from "../../projects_seed.json";
 
-let seedProjects: any[] = [];
-try {
-  const filePath = path.join(process.cwd(), "projects_seed.json");
-  if (fs.existsSync(filePath)) {
-    const raw = fs.readFileSync(filePath, "utf-8");
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      seedProjects = parsed.map((p, index) => ({
-        ...p,
-        id: p.id || p.project_code || index + 1,
-        original_cost: Number(p.original_cost) || 0,
-        revised_cost: Number(p.revised_cost ?? p.original_cost) || 0,
-        cumulative_expenditure: Number(p.cumulative_expenditure) || 0,
-        physical_progress: Number(p.physical_progress) || 0,
-        status: p.status || "Ongoing"
-      }));
-    }
-  }
-} catch (e) {
-  console.error("Failed to load projects_seed.json:", e);
-}
-
-export const FALLBACK_PROJECTS = seedProjects;
+export const FALLBACK_PROJECTS: any[] = Array.isArray(rawSeedProjects)
+  ? (rawSeedProjects as any[]).map((p, index) => ({
+      ...p,
+      id: p.id || p.project_code || index + 1,
+      original_cost: Number(p.original_cost) || 0,
+      revised_cost: Number(p.revised_cost ?? p.original_cost) || 0,
+      cumulative_expenditure: Number(p.cumulative_expenditure) || 0,
+      physical_progress: Number(p.physical_progress) || 0,
+      status: p.status || "Ongoing"
+    }))
+  : [];
 
 
 export const FALLBACK_BENCHMARKS = [
