@@ -142,12 +142,31 @@ function MapClickListener({ onSelect }: { onSelect: (pos: [number, number]) => v
   return null;
 }
 
-// Helper to keep map centered on hotspot
-function MapRecenter({ center }: { center: [number, number] }) {
+// Helper to ensure container dimensions and centering are correctly synced
+function MapController({ center }: { center: [number, number] }) {
   const map = useMap();
   useEffect(() => {
-    map.setView(center, 14);
+    const handleSync = () => {
+      try {
+        map.invalidateSize();
+        map.setView(center, 14, { animate: false });
+      } catch (err) {
+        console.warn("Map invalidateSize warning:", err);
+      }
+    };
+
+    handleSync();
+    const t1 = setTimeout(handleSync, 100);
+    const t2 = setTimeout(handleSync, 350);
+    const t3 = setTimeout(handleSync, 800);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
   }, [center[0], center[1], map]);
+
   return null;
 }
 
@@ -242,19 +261,23 @@ export default function InspectorMapPicker({
   };
 
   return (
-    <div className="h-80 sm:h-96 w-full rounded-2xl border-2 border-slate-200 overflow-hidden relative shadow-sm z-0">
+    <div 
+      style={{ height: "380px", minHeight: "380px", width: "100%" }}
+      className="w-full rounded-2xl border-2 border-slate-200 overflow-hidden relative shadow-sm z-0 bg-slate-100"
+    >
       <MapContainer 
         center={defaultCenter} 
         zoom={14} 
-        style={{ height: "100%", width: "100%" }}
+        style={{ height: "380px", minHeight: "380px", width: "100%" }}
         scrollWheelZoom={true}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          subdomains={["a", "b", "c", "d"]}
         />
 
-        <MapRecenter center={defaultCenter} />
+        <MapController center={defaultCenter} />
 
         {/* 1. Demand Hotspot Zone - Pulsing Red Area */}
         <Circle

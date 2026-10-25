@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import "leaflet/dist/leaflet.css";
 import "./globals.css";
 import ChatAssistant from "@/components/ChatAssistant";
 import { getSession } from "@/lib/auth";
@@ -15,6 +16,14 @@ export default async function RootLayout({ children }: any) {
       lang="en"
       className="h-full antialiased font-sans"
     >
+      <head>
+        <link 
+          rel="stylesheet" 
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossOrigin="" 
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         {children}
         <ChatAssistant />

@@ -8,7 +8,11 @@ import dynamic from "next/dynamic";
 
 const MapPicker = dynamic(() => import("@/components/InspectorMapPicker"), {
   ssr: false,
-  loading: () => <div className="h-64 w-full bg-slate-100 animate-pulse flex items-center justify-center text-slate-400">Loading Map...</div>
+  loading: () => (
+    <div className="h-[380px] w-full bg-slate-100 rounded-2xl border-2 border-slate-200 animate-pulse flex items-center justify-center text-slate-400 font-semibold text-xs">
+      Loading Interactive Hotspot Map...
+    </div>
+  )
 });
 
 const DEMO_INSPECTORS: Record<string, any> = {

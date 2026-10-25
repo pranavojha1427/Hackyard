@@ -175,3 +175,53 @@
   -webkit-text-fill-color: transparent;
 }
 
+/* Leaflet Map Global Container & Layer Fixes */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 360px !important;
+  background-color: #f1f5f9 !important;
+  position: relative !important;
+  outline: none !important;
+  font-family: inherit !important;
+}
+
+.leaflet-tile {
+  visibility: inherit !important;
+  max-width: none !important;
+}
+
+.leaflet-pane {
+  z-index: 200 !important;
+}
+
+.leaflet-tile-pane {
+  z-index: 200 !important;
+}
+
+.leaflet-overlay-pane {
+  z-index: 400 !important;
+}
+
+.leaflet-shadow-pane {
+  z-index: 500 !important;
+}
+
+.leaflet-marker-pane {
+  z-index: 600 !important;
+}
+
+.leaflet-tooltip-pane {
+  z-index: 650 !important;
+}
+
+.leaflet-popup-pane {
+  z-index: 700 !important;
+}
+
+.leaflet-map-pane svg {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+}
+
