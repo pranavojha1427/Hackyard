@@ -161,7 +161,13 @@ export default function AdminHotspots({ currentUser }: { currentUser?: any }) {
     const { data: pData } = await supabase.from('projects').select('*').eq('hml_category', hotspot.infrastructure_category).eq('state', hotspot.state).order('created_at', { ascending: false }).limit(1);
 
     const description = hotspot.inspector_report || "Raised from Field Report";
-    const amountStr = prompt("Enter Estimated Budget (in Crores):", "50");
+    const defaultAmount = hotspot.preferred_amount ? String(hotspot.preferred_amount) : "50";
+    const amountStr = prompt(
+      hotspot.preferred_amount 
+        ? `Enter Estimated Budget in ₹ Crores [Inspector Recommended: ₹${hotspot.preferred_amount} Cr]:` 
+        : "Enter Estimated Budget in ₹ Crores:", 
+      defaultAmount
+    );
     if (!amountStr) return;
     const amount = parseFloat(amountStr) || 0;
 
@@ -326,6 +332,15 @@ export default function AdminHotspots({ currentUser }: { currentUser?: any }) {
                                     <div className="bg-slate-100 p-2 rounded text-xs font-mono flex items-center text-slate-700">
                                         <MapPin className="w-3 h-3 mr-1 text-rose-500" />
                                         Exact Location Pinned: {Number(h.exact_lat).toFixed(6)}, {Number(h.exact_lng).toFixed(6)}
+                                    </div>
+                                )}
+                                {h.preferred_amount ? (
+                                    <div className="mt-2 bg-emerald-50 text-emerald-800 p-2 rounded text-xs font-semibold flex items-center border border-emerald-200">
+                                        💰 Inspector Preferred Budget: ₹{h.preferred_amount} Crores
+                                    </div>
+                                ) : (
+                                    <div className="mt-2 bg-slate-100 text-slate-600 p-2 rounded text-xs font-medium flex items-center">
+                                        ℹ️ No Preferred Budget Allocated by Inspector (Ministry to Estimate)
                                     </div>
                                 )}
                             </div>
