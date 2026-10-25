@@ -339,36 +339,6 @@ export default function InspectorPortal() {
               </button>
             </form>
 
-            {/* Quick-fill helper for inspectors */}
-            <div className="pt-2 border-t border-slate-100">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">1-Click Demo Inspector Login</p>
-              <div className="grid grid-cols-1 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => { setPhone("9435012345"); setPassword("inspector123"); }}
-                  className="text-left text-xs p-2 bg-indigo-50/70 hover:bg-indigo-100/70 border border-indigo-200/60 rounded-lg text-indigo-900 flex justify-between items-center transition"
-                >
-                  <span className="font-semibold">Inspector Barua (Assam)</span>
-                  <span className="text-[10px] font-mono text-indigo-600">9435012345 / inspector123</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setPhone("9239663292"); setPassword("password@123"); }}
-                  className="text-left text-xs p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 flex justify-between items-center transition"
-                >
-                  <span className="font-medium">Pranav Ojha (West Bengal)</span>
-                  <span className="text-[10px] font-mono text-slate-500">9239663292 / password@123</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setPhone("9876543210"); setPassword("inspector123"); }}
-                  className="text-left text-xs p-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-slate-700 flex justify-between items-center transition"
-                >
-                  <span className="font-medium">Sr. Inspector Sharma (National)</span>
-                  <span className="text-[10px] font-mono text-slate-500">9876543210 / inspector123</span>
-                </button>
-              </div>
-            </div>
 
             <div className="text-center pt-2">
               <Link href="/" className="text-xs text-slate-500 hover:text-indigo-600 transition">
