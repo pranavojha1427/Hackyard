@@ -7,9 +7,19 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/api/notifications").then(r => r.json()).then(data => {
-      if(Array.isArray(data)) setNotifications(data);
-    });
+    fetch("/api/notifications")
+      .then(async r => {
+        if (!r.ok) return [];
+        try {
+          return await r.json();
+        } catch {
+          return [];
+        }
+      })
+      .then(data => {
+        if (Array.isArray(data)) setNotifications(data);
+      })
+      .catch(() => setNotifications([]));
   }, []);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;

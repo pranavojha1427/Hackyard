@@ -14,6 +14,7 @@ export interface CitizenComplaint {
   state: string;
   status: string;
   channel: string;
+  hotspot_id?: string | null;
   created_at: string;
 }
 
@@ -32,6 +33,7 @@ const inMemoryComplaints: CitizenComplaint[] = [
     state: "Assam",
     status: "pending",
     channel: "portal",
+    hotspot_id: "a7d80079-4dd9-4150-ad43-7daa14c5d8c0",
     created_at: new Date().toISOString()
   }
 ];
@@ -73,4 +75,28 @@ export function getLocalComplaints(): CitizenComplaint[] {
     console.warn("Could not read local complaints file:", err);
   }
   return inMemoryComplaints;
+}
+
+export function updateLocalComplaintsHotspot(hotspotId: string, options: { state?: string; category?: string; ids?: string[] }) {
+  try {
+    const filePath = path.join(process.cwd(), '.pragatipulse-data', 'citizen_complaints.json');
+    const complaints = getLocalComplaints();
+    let updated = false;
+
+    for (const c of complaints) {
+      const matchId = options.ids && options.ids.includes(c.id);
+      const matchStateCategory = options.state && options.category && c.state === options.state && c.infrastructure_category === options.category;
+      
+      if (matchId || matchStateCategory) {
+        c.hotspot_id = hotspotId;
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      fs.writeFileSync(filePath, JSON.stringify(complaints, null, 2), 'utf-8');
+    }
+  } catch (err) {
+    console.warn("Could not update local complaints hotspot_id:", err);
+  }
 }

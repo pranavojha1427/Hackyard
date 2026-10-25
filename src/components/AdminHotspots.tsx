@@ -29,53 +29,110 @@ export default function AdminHotspots({ currentUser }: { currentUser?: any }) {
 
   const fetchData = async () => {
     setLoading(true);
-    // Fetch unassigned complaints (no hotspot_id)
-    let complaintsQuery = supabase.from('citizen_requests').select('*').is('hotspot_id', null).order('created_at', { ascending: false });
-    if (currentUser?.role === 'state_admin' && currentUser?.state) {
-        complaintsQuery = complaintsQuery.eq('state', currentUser.state);
-    }
-    const { data: cData } = await complaintsQuery;
-    
-    // Group similar complaints by state & category for UI grouping
-    const grouped = (cData || []).reduce((acc: any, curr) => {
-      const key = `${curr.state}-${curr.infrastructure_category}`;
-      if (!acc[key]) acc[key] = { state: curr.state, category: curr.infrastructure_category, complaints: [] };
-      acc[key].complaints.push(curr);
-      return acc;
-    }, {});
-    
-    // Only show groups with 2+ complaints as potential hotspots
-    setUnassignedComplaints(Object.values(grouped).filter((g: any) => g.complaints.length >= 2));
+    try {
+      // 1. Fetch live hotspots (with auto-clustering of 3+ complaints enabled)
+      const hsRes = await fetch(`/api/hotspots?autoCluster=true${currentUser?.role === 'state_admin' && currentUser?.state ? `&state=${encodeURIComponent(currentUser.state)}` : ''}`);
+      if (hsRes.ok) {
+        const hsData = await hsRes.json();
+        if (hsData.hotspots) {
+          setHotspots(hsData.hotspots);
+        }
+      } else {
+        // Direct Supabase fallback
+        let hotspotsQuery = supabase.from('demand_hotspots').select(`*, inspectors ( name, phone )`).order('created_at', { ascending: false });
+        if (currentUser?.role === 'state_admin' && currentUser?.state) {
+            hotspotsQuery = hotspotsQuery.eq('state', currentUser.state);
+        }
+        const { data: hData } = await hotspotsQuery;
+        setHotspots(hData || []);
+      }
 
-    // Fetch existing hotspots
-    let hotspotsQuery = supabase.from('demand_hotspots').select(`*, inspectors ( name, phone )`).order('created_at', { ascending: false });
-    if (currentUser?.role === 'state_admin' && currentUser?.state) {
-        hotspotsQuery = hotspotsQuery.eq('state', currentUser.state);
+      // 2. Fetch unassigned complaints from unified complaints API
+      const cRes = await fetch(`/api/complaints${currentUser?.role === 'state_admin' && currentUser?.state ? `?state=${encodeURIComponent(currentUser.state)}` : ''}`);
+      let allComplaints: any[] = [];
+      if (cRes.ok) {
+        const cJson = await cRes.json();
+        allComplaints = (cJson.complaints || []).filter((c: any) => !c.hotspot_id);
+      } else {
+        let complaintsQuery = supabase.from('citizen_requests').select('*').is('hotspot_id', null).order('created_at', { ascending: false });
+        if (currentUser?.role === 'state_admin' && currentUser?.state) {
+            complaintsQuery = complaintsQuery.eq('state', currentUser.state);
+        }
+        const { data: cData } = await complaintsQuery;
+        allComplaints = cData || [];
+      }
+      
+      // Group similar complaints by state & category for UI grouping
+      const grouped = allComplaints.reduce((acc: any, curr) => {
+        const key = `${curr.state}-${curr.infrastructure_category}`;
+        if (!acc[key]) acc[key] = { state: curr.state, category: curr.infrastructure_category, complaints: [] };
+        acc[key].complaints.push(curr);
+        return acc;
+      }, {});
+      
+      // Show groups with 2+ complaints as potential hotspots
+      setUnassignedComplaints(Object.values(grouped).filter((g: any) => g.complaints.length >= 2));
+    } catch (err) {
+      console.warn("fetchData warning:", err);
     }
-    const { data: hData } = await hotspotsQuery;
-    
-    setHotspots(hData || []);
     setLoading(false);
   };
 
-  const handleCreateAndAssign = async (group: any) => {
-    // 1. Find a random inspector in that state
-    const { data: insData } = await supabase.from('inspectors').select('*').eq('state', group.state);
-    if (!insData || insData.length === 0) {
-        alert(`No inspectors found in ${group.state}. Please create one first.`);
-        return;
+  const handleManualAutoCluster = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/hotspots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minThreshold: 2 })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        alert(`Clustering complete! ${data.hotspotsCreated || 0} new hotspot(s) created, ${data.hotspotsUpdated || 0} updated.`);
+      }
+    } catch (e) {
+      console.error("Clustering error:", e);
     }
-    const randomInspector = insData[Math.floor(Math.random() * insData.length)];
+    await fetchData();
+  };
+
+  const handleCreateAndAssign = async (group: any) => {
+    // 1. Find an inspector in that state, or fallback to National or any inspector
+    let selectedInspector: any = null;
+    const { data: insData } = await supabase.from('inspectors').select('*').eq('state', group.state);
+    
+    if (insData && insData.length > 0) {
+      selectedInspector = insData[Math.floor(Math.random() * insData.length)];
+    } else {
+      // Fallback: National inspector
+      const { data: natData } = await supabase.from('inspectors').select('*').eq('state', 'National');
+      if (natData && natData.length > 0) {
+        selectedInspector = natData[0];
+      } else {
+        // Fallback: Any available inspector
+        const { data: anyData } = await supabase.from('inspectors').select('*').limit(1);
+        if (anyData && anyData.length > 0) {
+          selectedInspector = anyData[0];
+        }
+      }
+    }
+
+    if (!selectedInspector) {
+      alert("No inspectors available in system to assign.");
+      return;
+    }
 
     // 2. Create Hotspot
+    const firstCoord = group.complaints.find((c: any) => c.location)?.location || null;
     const { data: hData, error: hError } = await supabase.from('demand_hotspots').insert({
         state: group.state,
         infrastructure_category: group.category,
         request_count: group.complaints.length,
-        inspector_id: randomInspector.id,
+        priority_score: Number((group.complaints.length * 2.2 + 2.5).toFixed(1)),
+        average_sentiment: -0.75,
+        inspector_id: selectedInspector.id,
         status: 'assigned',
-        // Mock a polygon center using the first complaint's location
-        hotspot_polygon: group.complaints[0].location
+        hotspot_polygon: firstCoord
     }).select().single();
 
     if (hError || !hData) {
@@ -85,10 +142,12 @@ export default function AdminHotspots({ currentUser }: { currentUser?: any }) {
 
     // 3. Link complaints to Hotspot
     for (let c of group.complaints) {
+      if (c.id && !String(c.id).startsWith('local-')) {
         await supabase.from('citizen_requests').update({ hotspot_id: hData.id }).eq('id', c.id);
+      }
     }
 
-    alert(`Hotspot created and assigned to Inspector ${randomInspector.name} (${group.state})`);
+    alert(`Hotspot created and assigned to Inspector ${selectedInspector.name} (${selectedInspector.state})`);
     fetchData();
   };
 
@@ -138,14 +197,31 @@ export default function AdminHotspots({ currentUser }: { currentUser?: any }) {
   return (
     <div className="p-6 bg-slate-50 border border-slate-200 space-y-8">
       
-      {/* Potential Hotspots - Only Admin sees this */}
-      {(currentUser?.role === 'admin' || currentUser?.role === 'state_admin') && (
+      {/* Potential Hotspots - Visible to Admins */}
+      {(currentUser?.role === 'admin' || currentUser?.role === 'state_admin' || !currentUser?.role) && (
       <div>
-        <h2 className="text-2xl font-bold font-serif text-slate-800 flex items-center mb-1"><AlertCircle className="w-6 h-6 mr-2 text-rose-500" /> Detected Demand Hotspots</h2>
-        <p className="text-slate-500 text-sm mb-6">Groups of similar citizen complaints awaiting inspector assignment.</p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-2xl font-bold font-serif text-slate-800 flex items-center mb-1">
+              <AlertCircle className="w-6 h-6 mr-2 text-rose-500" /> Detected Demand Hotspots
+            </h2>
+            <p className="text-slate-500 text-sm">
+              Citizen grievances grouped by region & infrastructure category. Automatic clustering triggers when 3+ complaints arrive from the same area.
+            </p>
+          </div>
+          {unassignedComplaints.length > 0 && (
+            <button 
+              onClick={handleManualAutoCluster}
+              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition flex items-center gap-2 self-start sm:self-auto cursor-pointer"
+            >
+              <ShieldAlert className="w-4 h-4" />
+              Auto-Cluster All Pending Hotspots
+            </button>
+          )}
+        </div>
 
         {unassignedComplaints.length === 0 ? (
-          <div className="p-8 text-center bg-white border border-slate-200 rounded text-slate-500">No new potential hotspots detected.</div>
+          <div className="p-8 text-center bg-white border border-slate-200 rounded text-slate-500">No new unassigned complaints waiting for clustering.</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {unassignedComplaints.map((group, idx) => {
@@ -236,10 +312,10 @@ export default function AdminHotspots({ currentUser }: { currentUser?: any }) {
                             <span className="text-slate-500">Citizen Requests:</span>
                             <span className="font-bold text-slate-700">{h.request_count}</span>
                         </div>
-                        {currentUser?.role === 'admin' && h.inspectors && (
+                        {h.inspectors && (
                         <div className="flex justify-between">
                             <span className="text-slate-500">Inspector:</span>
-                            <span className="font-semibold text-slate-700">{h.inspectors.name}</span>
+                            <span className="font-semibold text-slate-700">{h.inspectors.name} ({h.inspectors.phone || 'Field Officer'})</span>
                         </div>
                         )}
                         {h.inspector_report && (

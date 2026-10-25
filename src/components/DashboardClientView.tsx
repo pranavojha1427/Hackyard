@@ -413,6 +413,8 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
               } else if (currentUser.role === 'admin') {
                 tabs.push(
                   { id: 'dashboard', label: 'Priority Engine' },
+                  { id: 'hotspots', label: 'Demand Hotspots' },
+                  { id: 'complaints', label: 'Citizen Grievances' },
                   { id: 'gatekeeper', label: 'PDF Gatekeeper (Parity)' },
                   { id: 'accounts', label: 'Account Provisioning' }
                 );
@@ -766,7 +768,7 @@ export function DashboardClientView({ allProjects, agencyData, benchResData, ale
         )}
 
         {/* Other Tabs */}
-        {activeTab === "hotspots" && (currentUser?.role === "state_admin" || currentUser?.role === "ministry") ? (
+        {activeTab === "hotspots" && (currentUser?.role === "admin" || currentUser?.role === "state_admin" || currentUser?.role === "ministry") ? (
           <div className="bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/90 shadow-sm p-6">
             <AdminHotspots currentUser={currentUser} />
           </div>

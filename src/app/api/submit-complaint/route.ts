@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 import { saveLocalComplaint } from '@/lib/citizen-store';
+import { autoClusterHotspots } from '@/lib/hotspot-clustering';
 
 function inferStateFromCoordinates(lat: number, lon: number): string {
   if (lat >= 24 && lat <= 28.5 && lon >= 89.5 && lon <= 96.5) return "Assam";
@@ -63,7 +64,13 @@ function inferCategoryFromText(text: string, requestedMinistry?: string): { cate
 
 export async function POST(req: Request) {
   try {
-    const { name, phone, details, location, ministry } = await req.json();
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    }
+    const { name, phone, details, location, ministry } = body;
 
     // 0. Strict Mobile Validation (Mandatory for citizen tracking)
     const cleanPhone = String(phone || "").replace(/\D/g, "");
@@ -194,13 +201,33 @@ Return JSON with format: {"translated_text": "<English translation>", "category"
       console.warn("Supabase network error, stored in local resilient store:", e?.message || e);
     }
 
+    // 5. Automated Hotspot Clustering Engine Trigger
+    // When 3 or more complaints accumulate for the same location/state/category,
+    // automatically generate an infrastructure demand hotspot and dispatch an inspector.
+    let clusterResult = null;
+    try {
+      clusterResult = await autoClusterHotspots(state, category, 3);
+    } catch (clusterErr) {
+      console.warn("Automated clustering trigger error:", clusterErr);
+    }
+
+    const wasHotspotCreated = (clusterResult?.hotspotsCreated || 0) > 0;
+    const wasHotspotUpdated = (clusterResult?.hotspotsUpdated || 0) > 0;
+
     return NextResponse.json({
       success: true,
       savedToSupabase,
       complaintId: localRecord.id,
       state,
       category,
-      message: "Grievance recorded successfully and dispatched to ministry."
+      hotspotCreated: wasHotspotCreated,
+      hotspotUpdated: wasHotspotUpdated,
+      clusterDetails: clusterResult?.details || [],
+      message: wasHotspotCreated
+        ? `Grievance registered. Critical threshold of 3+ complaints reached: New Infrastructure Demand Hotspot automatically created and assigned to Inspector!`
+        : wasHotspotUpdated
+        ? `Grievance registered and merged into active demand hotspot.`
+        : "Grievance recorded successfully and dispatched to ministry."
     });
   } catch (err: any) {
     console.error("Grievance submission unexpected error:", err);

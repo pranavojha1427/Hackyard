@@ -11,18 +11,30 @@ export default function ViewComplaints() {
 
   useEffect(() => {
     async function fetchComplaints() {
-      const { data, error } = await supabase
-        .from('citizen_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (!error && data) {
-        setComplaints(data);
-        const staticStates = ['Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chandigarh', 'Chhattisgarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu and Kashmir', 'Jharkhand', 'Karnataka', 'Kerala', 'Ladakh', 'Lakshadweep', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Puducherry', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'];
-        const dbStates = Array.from(new Set(data.map((d: any) => d.state).filter(Boolean)));
-        const combined = Array.from(new Set([...staticStates, ...dbStates])).sort();
-        setStates(["All States", ...combined]);
+      let data: any[] = [];
+      try {
+        const res = await fetch('/api/complaints');
+        if (res.ok) {
+          const json = await res.json();
+          data = json.complaints || [];
+        }
+      } catch {
+        // Fallback
       }
+
+      if (data.length === 0) {
+        const { data: sData } = await supabase
+          .from('citizen_requests')
+          .select('*')
+          .order('created_at', { ascending: false });
+        data = sData || [];
+      }
+
+      setComplaints(data);
+      const staticStates = ['Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chandigarh', 'Chhattisgarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jammu and Kashmir', 'Jharkhand', 'Karnataka', 'Kerala', 'Ladakh', 'Lakshadweep', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Puducherry', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'];
+      const dbStates = Array.from(new Set(data.map((d: any) => d.state).filter(Boolean)));
+      const combined = Array.from(new Set([...staticStates, ...dbStates])).sort();
+      setStates(["All States", ...combined]);
       setLoading(false);
     }
     fetchComplaints();
@@ -67,7 +79,7 @@ export default function ViewComplaints() {
             <tbody>
               {filteredComplaints.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-slate-500">
+                  <td colSpan={5} className="p-8 text-center text-slate-500">
                     No complaints found for the selected state.
                   </td>
                 </tr>
@@ -75,7 +87,14 @@ export default function ViewComplaints() {
                 filteredComplaints.map((c: any) => (
                   <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="p-4">
-                      <div className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold inline-block mb-1">{c.infrastructure_category || 'Unknown'}</div>
+                      <div className="flex flex-wrap items-center gap-1 mb-1">
+                        <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold inline-block">{c.infrastructure_category || 'Unknown'}</span>
+                        {c.hotspot_id && (
+                          <span className="bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded text-[10px] font-bold inline-flex items-center">
+                            ⚡ Hotspot Active
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-slate-500">{c.ministry || 'Unassigned'}</div>
                     </td>
                     <td className="p-4 text-slate-700 font-medium">{c.name || 'Anonymous'}</td>

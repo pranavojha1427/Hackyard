@@ -29,6 +29,15 @@ const DEMO_INSPECTORS: Record<string, any> = {
     phone: "9876543210",
     password: "inspector123",
     state: "National"
+  },
+  "9435012345": {
+    id: "1a9136eb-e91b-4af8-8364-272f636bea92",
+    name: "Inspector Barua",
+    age: 38,
+    experience_years: 8,
+    phone: "9435012345",
+    password: "inspector123",
+    state: "Assam"
   }
 };
 
@@ -44,6 +53,7 @@ export default function InspectorPortal() {
   // Dashboard states
   const [hotspots, setHotspots] = useState<any[]>([]);
   const [selectedHotspot, setSelectedHotspot] = useState<any>(null);
+  const [hotspotComplaints, setHotspotComplaints] = useState<any[]>([]);
   
   // Report states
   const [reportText, setReportText] = useState("");
@@ -73,12 +83,17 @@ export default function InspectorPortal() {
 
       if (inspectorObj) {
         setInspector(inspectorObj);
-        // Fetch hotspots assigned to this inspector
-        const { data: hData } = await supabase
+        // Fetch hotspots assigned to this inspector (or all for National inspector)
+        let query = supabase
           .from('demand_hotspots')
           .select('*')
-          .eq('inspector_id', id)
           .order('created_at', { ascending: false });
+
+        if (inspectorObj.state !== 'National') {
+          query = query.eq('inspector_id', id);
+        }
+
+        const { data: hData } = await query;
 
         if (hData && hData.length > 0) {
           setHotspots(hData);
@@ -152,11 +167,28 @@ export default function InspectorPortal() {
     setLoading(false);
   };
 
+  const handleSelectHotspot = async (h: any) => {
+    setSelectedHotspot(h);
+    setHotspotComplaints([]);
+    try {
+      const { data } = await supabase
+        .from('citizen_requests')
+        .select('*')
+        .eq('hotspot_id', h.id);
+      if (data && data.length > 0) {
+        setHotspotComplaints(data);
+      }
+    } catch (e) {
+      console.warn("Could not fetch complaints for hotspot:", e);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('inspector_id');
     setInspector(null);
     setHotspots([]);
     setSelectedHotspot(null);
+    setHotspotComplaints([]);
   };
 
   const submitReport = async (e: React.FormEvent) => {
@@ -308,6 +340,23 @@ export default function InspectorPortal() {
               </span>
             </div>
 
+            {/* Aggregated Citizen Complaints */}
+            {hotspotComplaints.length > 0 && (
+              <div className="mb-8 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3 flex items-center">
+                  <FileText className="w-4 h-4 mr-1.5 text-indigo-600" /> Aggregated Citizen Grievances ({hotspotComplaints.length})
+                </h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {hotspotComplaints.map((c, idx) => (
+                    <div key={c.id || idx} className="text-xs bg-white p-3 rounded-lg border border-slate-200">
+                      <span className="font-semibold text-slate-800">{c.name || 'Citizen'}: </span>
+                      <span className="text-slate-600">{c.translated_text || c.raw_text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <form onSubmit={submitReport} className="space-y-6 max-w-2xl">
               <div>
                 <label className="block text-sm font-semibold text-slate-800 mb-2">Field Examination Report</label>
@@ -410,7 +459,7 @@ export default function InspectorPortal() {
                       </div>
                     ) : (
                       <button 
-                        onClick={() => setSelectedHotspot(h)} 
+                        onClick={() => handleSelectHotspot(h)} 
                         className="w-full py-2.5 bg-indigo-50 text-indigo-700 font-semibold rounded-lg hover:bg-indigo-100 transition flex justify-between items-center px-4 text-sm"
                       >
                         Examine & Pinpoint <ChevronRight className="w-4 h-4" />
