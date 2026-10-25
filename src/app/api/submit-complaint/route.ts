@@ -65,8 +65,20 @@ export async function POST(req: Request) {
   try {
     const { name, phone, details, location, ministry } = await req.json();
 
-    if (!details || typeof details !== "string") {
+    // 0. Strict Mobile Validation (Mandatory for citizen tracking)
+    const cleanPhone = String(phone || "").replace(/\D/g, "");
+    if (!cleanPhone || cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+      return NextResponse.json({ 
+        error: "A valid 10-digit Indian mobile number is required to register an infrastructure grievance." 
+      }, { status: 400 });
+    }
+
+    if (!details || typeof details !== "string" || !details.trim()) {
       return NextResponse.json({ error: "Grievance details are required" }, { status: 400 });
+    }
+
+    if (!ministry || typeof ministry !== "string" || !ministry.trim()) {
+      return NextResponse.json({ error: "Target Ministry is required" }, { status: 400 });
     }
 
     // 1. Fast Geocode with Coordinate Heuristic Fallback
@@ -140,7 +152,7 @@ Return JSON with format: {"translated_text": "<English translation>", "category"
     // 3. Persist locally first (Guarantees zero-data-loss even if Supabase network drops)
     const localRecord = await saveLocalComplaint({
       name: name || "Anonymous Citizen",
-      hashed_phone: phone || "9876543210",
+      hashed_phone: cleanPhone,
       raw_text: details,
       translated_text: translated_text,
       infrastructure_category: category,
@@ -161,7 +173,7 @@ Return JSON with format: {"translated_text": "<English translation>", "category"
 
       const dbPromise = supabase.from('citizen_requests').insert({
         name: name || 'Citizen',
-        hashed_phone: phone || 'anonymous',
+        hashed_phone: cleanPhone,
         location: locationStr,
         raw_text: details,
         translated_text: translated_text,

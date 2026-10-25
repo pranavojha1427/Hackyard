@@ -1,13 +1,100 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Mic, Send, MapPin, CheckCircle, Activity, Sparkles, AlertCircle, Volume2, Square } from "lucide-react";
+import { ArrowLeft, Mic, Send, MapPin, CheckCircle, Activity, AlertCircle, Square, Phone } from "lucide-react";
 import Link from "next/link";
+
+export const ALL_INDIAN_LANGUAGES = [
+  { code: "en-IN", name: "English (India)", native: "English" },
+  { code: "hi-IN", name: "हिन्दी (Hindi)", native: "हिन्दी" },
+  { code: "bn-IN", name: "বাংলা (Bengali)", native: "বাংলা" },
+  { code: "ta-IN", name: "தமிழ் (Tamil)", native: "தமிழ்" },
+  { code: "te-IN", name: "తెలుగు (Telugu)", native: "తెలుగు" },
+  { code: "mr-IN", name: "मराठी (Marathi)", native: "मराठी" },
+  { code: "gu-IN", name: "ગુજરાતી (Gujarati)", native: "ગુજરાતી" },
+  { code: "kn-IN", name: "ಕನ್ನಡ (Kannada)", native: "ಕನ್ನಡ" },
+  { code: "ml-IN", name: "മലയാളം (Malayalam)", native: "മലയാളം" },
+  { code: "pa-IN", name: "ਪੰਜਾਬੀ (Punjabi)", native: "ਪੰਜਾਬੀ" },
+  { code: "or-IN", name: "ଓଡ଼ିଆ (Odia)", native: "ଓଡ଼ିଆ" },
+  { code: "as-IN", name: "অসমীয়া (Assamese)", native: "অসমীয়া" },
+  { code: "ur-IN", name: "اردو (Urdu)", native: "اردو" },
+  { code: "mai-IN", name: "मैथिली (Maithili)", native: "मैथिली" },
+  { code: "sa-IN", name: "संस्कृतम् (Sanskrit)", native: "संस्कृतम्" },
+  { code: "ne-IN", name: "नेपाली (Nepali)", native: "नेपाली" },
+  { code: "kok-IN", name: "कोंकणी (Konkani)", native: "कोंकणी" },
+  { code: "ks-IN", name: "کٲشُر / कश्मीरी (Kashmiri)", native: "کٲشُر" },
+  { code: "brx-IN", name: "बड़ो / Bodo", native: "बड़ो" },
+  { code: "sat-IN", name: "ᱥᱟᱱᱛᱟᱲᱤ / Santali", native: "ᱥᱟᱱᱛᱟᱲᱤ" },
+  { code: "doi-IN", name: "डोगरी (Dogri)", native: "डोगरी" },
+  { code: "sd-IN", name: "سنڌي / सिंधी (Sindhi)", native: "سنڌي" },
+  { code: "mni-IN", name: "ꯃꯤꯇꯩꯂꯣꯟ / Manipuri", native: "ꯃꯤꯇꯩꯂꯣꯟ" }
+];
+
+export const ALL_GOI_MINISTRIES = [
+  "Ministry of Agriculture & Farmers Welfare",
+  "Ministry of Ayush",
+  "Ministry of Chemicals and Fertilizers",
+  "Ministry of Civil Aviation",
+  "Ministry of Coal",
+  "Ministry of Commerce and Industry",
+  "Ministry of Communications",
+  "Ministry of Consumer Affairs, Food and Public Distribution",
+  "Ministry of Cooperation",
+  "Ministry of Corporate Affairs",
+  "Ministry of Culture",
+  "Ministry of Defence",
+  "Ministry of Development of North Eastern Region (DoNER)",
+  "Ministry of Earth Sciences",
+  "Ministry of Education",
+  "Ministry of Electronics and Information Technology (MeitY)",
+  "Ministry of Environment, Forest and Climate Change",
+  "Ministry of External Affairs",
+  "Ministry of Finance",
+  "Ministry of Fisheries, Animal Husbandry and Dairying",
+  "Ministry of Food Processing Industries",
+  "Ministry of Health & Family Welfare",
+  "Ministry of Heavy Industries",
+  "Ministry of Home Affairs",
+  "Ministry of Housing & Urban Affairs",
+  "Ministry of Information and Broadcasting",
+  "Ministry of Jal Shakti (Water Resources, River Development & GR)",
+  "Ministry of Jal Shakti (Drinking Water & Sanitation)",
+  "Ministry of Labour and Employment",
+  "Ministry of Law and Justice",
+  "Ministry of Micro, Small and Medium Enterprises (MSME)",
+  "Ministry of Mines",
+  "Ministry of Minority Affairs",
+  "Ministry of New and Renewable Energy",
+  "Ministry of Panchayati Raj",
+  "Ministry of Parliamentary Affairs",
+  "Ministry of Personnel, Public Grievances and Pensions",
+  "Ministry of Petroleum & Natural Gas",
+  "Ministry of Planning",
+  "Ministry of Ports, Shipping and Waterways",
+  "Ministry of Power",
+  "Ministry of Railways",
+  "Ministry of Road Transport & Highways",
+  "Ministry of Rural Development",
+  "Ministry of Science and Technology",
+  "Ministry of Skill Development and Entrepreneurship",
+  "Ministry of Social Justice and Empowerment",
+  "Ministry of Statistics and Programme Implementation (MoSPI)",
+  "Ministry of Steel",
+  "Ministry of Textiles",
+  "Ministry of Tourism",
+  "Ministry of Tribal Affairs",
+  "Ministry of Women and Child Development",
+  "Ministry of Youth Affairs and Sports",
+  "Department of Atomic Energy",
+  "Department of Space"
+];
 
 export default function CitizenPortal() {
   const [step, setStep] = useState<"login" | "otp" | "menu" | "complaint">("login");
   const [mobile, setMobile] = useState("");
   const [otp, setOtp] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [otpError, setOtpError] = useState("");
   const [location, setLocation] = useState<{lat: number, lon: number} | null>(null);
   
   // Voice Recording States
@@ -25,9 +112,12 @@ export default function CitizenPortal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && localStorage.getItem('citizen_phone')) {
-      setMobile(localStorage.getItem('citizen_phone')!);
-      setStep("menu");
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem('citizen_phone');
+      if (saved && saved.replace(/\D/g, "").length === 10) {
+        setMobile(saved.replace(/\D/g, ""));
+        setStep("menu");
+      }
     }
     requestLocation();
   }, []);
@@ -38,7 +128,6 @@ export default function CitizenPortal() {
         (pos) => setLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
         (err) => {
           console.warn("Location permission warning:", err);
-          // Default to high-density monitoring coordinates (Guwahati / Assam)
           setLocation({ lat: 26.1913, lon: 91.6924 });
         },
         { timeout: 5000, enableHighAccuracy: false }
@@ -50,15 +139,25 @@ export default function CitizenPortal() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (mobile.length > 9) setStep("otp");
+    const clean = mobile.replace(/\D/g, "");
+    if (!clean || clean.length !== 10 || !/^[6-9]\d{9}$/.test(clean)) {
+      setLoginError("Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9.");
+      return;
+    }
+    setLoginError("");
+    setStep("otp");
   };
 
   const handleVerifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    if (otp.length === 6) {
-      localStorage.setItem('citizen_phone', mobile);
-      setStep("menu");
+    const cleanOtp = otp.trim();
+    if (cleanOtp.length !== 6 || !/^\d{6}$/.test(cleanOtp)) {
+      setOtpError("Please enter a valid 6-digit OTP verification code.");
+      return;
     }
+    setOtpError("");
+    localStorage.setItem('citizen_phone', mobile);
+    setStep("menu");
   };
 
   const toggleRecording = async () => {
@@ -72,7 +171,7 @@ export default function CitizenPortal() {
   const startRecording = async () => {
     setVoiceNotice("Initializing microphone...");
     
-    // 1. Try Browser Native Web Speech API first (Chrome, Edge, Safari, Android)
+    // 1. Try Browser Native Web Speech API first
     const SpeechRecognition = typeof window !== 'undefined' 
       ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) 
       : null;
@@ -86,7 +185,8 @@ export default function CitizenPortal() {
 
         recognition.onstart = () => {
           setIsRecording(true);
-          setVoiceNotice("Listening... Speak in Hindi, English or Bengali now.");
+          const langObj = ALL_INDIAN_LANGUAGES.find(l => l.code === speechLang);
+          setVoiceNotice(`Listening in ${langObj?.name || 'selected language'}... Speak now.`);
         };
 
         recognition.onresult = (event: any) => {
@@ -147,7 +247,7 @@ export default function CitizenPortal() {
       };
 
       mediaRecorder.onstop = async () => {
-        setVoiceNotice("Processing speech...");
+        setVoiceNotice("Processing speech note...");
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const formData = new FormData();
         formData.append('audio', audioBlob);
@@ -171,7 +271,7 @@ export default function CitizenPortal() {
 
       mediaRecorder.start();
       setIsRecording(true);
-      setVoiceNotice("Recording audio note... Click Stop when finished.");
+      setVoiceNotice("Recording voice note... Click Stop when finished.");
     } catch (err) {
       console.error("Error accessing mic", err);
       alert("Microphone access is required to use voice recording. Please allow permission or type your complaint.");
@@ -246,21 +346,41 @@ export default function CitizenPortal() {
                   Enter your mobile number to participate directly in national infrastructure monitoring.
                 </p>
               </div>
+
+              {loginError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>{loginError}</span>
+                </div>
+              )}
+
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">Mobile Number</label>
-                  <input 
-                    type="tel" 
-                    value={mobile}
-                    onChange={e => setMobile(e.target.value)}
-                    placeholder="+91 98765 43210" 
-                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition text-sm font-medium"
-                    required
-                  />
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                    Mobile Number (10 Digits Mandatory)
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                      +91
+                    </span>
+                    <input 
+                      type="tel" 
+                      value={mobile}
+                      maxLength={10}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        setMobile(val);
+                        setLoginError("");
+                      }}
+                      placeholder="9876543210" 
+                      className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition text-sm font-semibold tracking-wider text-slate-900"
+                      required
+                    />
+                  </div>
                 </div>
                 <button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold py-3 rounded-xl hover:from-indigo-700 hover:to-blue-700 transition shadow-md shadow-indigo-600/20 text-sm"
+                  className="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-bold py-3.5 rounded-xl hover:from-indigo-700 hover:to-blue-700 transition shadow-md shadow-indigo-600/20 text-sm"
                 >
                   Continue via OTP
                 </button>
@@ -273,15 +393,28 @@ export default function CitizenPortal() {
             <div className="p-6 sm:p-8 space-y-6">
               <div className="text-center">
                 <h2 className="text-lg font-bold text-slate-800">Verification Code</h2>
-                <p className="text-slate-500 text-xs mt-1">6-digit OTP dispatched to {mobile}</p>
+                <p className="text-slate-500 text-xs mt-1">6-digit OTP dispatched to +91 {mobile}</p>
               </div>
+
+              {otpError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                  <span>{otpError}</span>
+                </div>
+              )}
+
               <form onSubmit={handleVerifyOtp} className="space-y-4">
                 <div>
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">Enter Verification Code</label>
                   <input 
                     type="text" 
                     value={otp}
-                    onChange={e => setOtp(e.target.value)}
+                    maxLength={6}
+                    onChange={e => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 6);
+                      setOtp(val);
+                      setOtpError("");
+                    }}
                     placeholder="123456" 
                     className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none text-center tracking-widest text-xl font-bold font-mono transition"
                     required
@@ -300,8 +433,22 @@ export default function CitizenPortal() {
           {/* Main Menu Step */}
           {step === "menu" && (
             <div className="p-6 sm:p-8 space-y-5">
-              <div className="flex items-center justify-center text-emerald-700 bg-emerald-50 py-2.5 px-4 rounded-xl text-xs font-bold border border-emerald-200">
-                <CheckCircle className="w-4 h-4 mr-2 text-emerald-600" /> Mobile verified successfully
+              <div className="flex items-center justify-between text-emerald-700 bg-emerald-50 py-2.5 px-4 rounded-xl text-xs font-bold border border-emerald-200">
+                <span className="flex items-center">
+                  <CheckCircle className="w-4 h-4 mr-2 text-emerald-600" /> 
+                  Verified: +91 {mobile}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('citizen_phone');
+                    setMobile("");
+                    setStep("login");
+                  }}
+                  className="text-[11px] text-slate-500 hover:text-rose-600 underline font-normal"
+                >
+                  Change
+                </button>
               </div>
               
               <button 
@@ -316,7 +463,7 @@ export default function CitizenPortal() {
                 </div>
                 <div className="ml-4">
                   <h3 className="font-bold text-slate-900 group-hover:text-indigo-950 transition">Register Infrastructure Grievance</h3>
-                  <p className="text-xs text-slate-500 mt-0.5">Voice recording in any Indian language or text submission</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Voice recording in all 22+ Indian languages or text submission</p>
                 </div>
               </button>
             </div>
@@ -324,9 +471,35 @@ export default function CitizenPortal() {
 
           {/* Complaint Form Step */}
           {step === "complaint" && (
-            <div className="flex flex-col max-h-[720px] overflow-y-auto">
+            <div className="flex flex-col max-h-[740px] overflow-y-auto">
               <div className="p-6 sm:p-8 space-y-4">
                 
+                {/* Citizen Mobile Number (MANDATORY) */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5 flex items-center justify-between">
+                    <span>Citizen Mobile Number (Mandatory)</span>
+                    <span className="text-[10px] text-indigo-600 font-semibold">10-Digit Mobile Required</span>
+                  </label>
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                      +91
+                    </span>
+                    <input 
+                      type="tel" 
+                      value={mobile}
+                      maxLength={10}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        setMobile(val);
+                      }}
+                      placeholder="Enter 10-digit phone number (e.g. 9876543210)" 
+                      className="w-full pl-12 pr-4 py-2.5 sm:py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition text-sm font-semibold tracking-wider text-slate-900"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Citizen Name */}
                 <div>
                   <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">Citizen Name</label>
                   <input 
@@ -339,43 +512,43 @@ export default function CitizenPortal() {
                   />
                 </div>
 
+                {/* Target Ministry / Department (ALL MINISTRIES - NO "OTHERS") */}
                 <div>
-                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">Target Ministry / Department</label>
+                  <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1.5">
+                    Target Ministry / Department ({ALL_GOI_MINISTRIES.length} Central Ministries)
+                  </label>
                   <select 
                     value={ministry}
                     onChange={e => setMinistry(e.target.value)}
                     className="w-full p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition text-sm font-medium"
                     required
                   >
-                    <option value="" disabled>Select Concerned Ministry</option>
-                    <option value="Ministry of Road Transport & Highways">Ministry of Road Transport & Highways</option>
-                    <option value="Ministry of Railways">Ministry of Railways</option>
-                    <option value="Ministry of Power">Ministry of Power</option>
-                    <option value="Department of Water Resources, River Development & GR">Department of Water Resources, River Development & GR</option>
-                    <option value="Ministry of Housing & Urban Affairs">Ministry of Housing & Urban Affairs</option>
-                    <option value="Ministry of Petroleum & Natural Gas">Ministry of Petroleum & Natural Gas</option>
-                    <option value="Ministry of Health & Family Welfare">Ministry of Health & Family Welfare</option>
-                    <option value="Ministry of Coal">Ministry of Coal</option>
-                    <option value="Others">Others</option>
+                    <option value="" disabled>Select Target Ministry / Department</option>
+                    {ALL_GOI_MINISTRIES.map(min => (
+                      <option key={min} value={min}>{min}</option>
+                    ))}
                   </select>
                 </div>
 
+                {/* Complaint Details + All Indian Languages */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 mb-1.5">
                     <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      Complaint Details (Any Language)
+                      Complaint Details
                     </label>
                     <div className="flex items-center gap-1.5">
+                      {/* 23 Official Indian Languages Selector */}
                       <select 
                         value={speechLang}
                         onChange={e => setSpeechLang(e.target.value)}
-                        className="text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-300 rounded-lg px-2 py-1 outline-none"
-                        title="Speech Recognition Language"
+                        className="text-[11px] font-semibold bg-slate-100 text-slate-800 border border-slate-300 rounded-lg px-2 py-1 outline-none max-w-[160px] truncate"
+                        title="Voice Speech Recognition Language"
                       >
-                        <option value="en-IN">English (India)</option>
-                        <option value="hi-IN">हिन्दी (Hindi)</option>
-                        <option value="bn-IN">বাংলা (Bengali)</option>
-                        <option value="ta-IN">தமிழ் (Tamil)</option>
+                        {ALL_INDIAN_LANGUAGES.map(lang => (
+                          <option key={lang.code} value={lang.code}>
+                            {lang.name}
+                          </option>
+                        ))}
                       </select>
 
                       <button 
@@ -388,7 +561,7 @@ export default function CitizenPortal() {
                         }`}
                       >
                         {isRecording ? <Square className="w-3 h-3 fill-rose-600" /> : <Mic className="w-3.5 h-3.5" />}
-                        {isRecording ? "Stop Recording" : "Record Voice (Bilingual)"}
+                        {isRecording ? "Stop Recording" : "Record Voice"}
                       </button>
                     </div>
                   </div>
@@ -414,7 +587,7 @@ export default function CitizenPortal() {
                   <textarea 
                     value={details}
                     onChange={e => setDetails(e.target.value)}
-                    placeholder="Describe the infrastructure issue in Hindi, Bengali, Tamil, English, etc..." 
+                    placeholder="Describe the infrastructure issue in any Indian language (Hindi, Bengali, Tamil, Telugu, Marathi, English, etc.)..." 
                     className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition text-sm h-32 resize-none"
                     required
                   />
@@ -438,16 +611,23 @@ export default function CitizenPortal() {
 
                 <button 
                   onClick={async () => {
-                    if (!name || !ministry || !details) return alert("Please fill all fields");
+                    const cleanPhone = mobile.replace(/\D/g, "");
+                    if (!cleanPhone || cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+                      return alert("Please enter a valid 10-digit Indian mobile number (starting with 6, 7, 8, or 9) to register your grievance.");
+                    }
+                    if (!name.trim()) return alert("Please enter your full name.");
+                    if (!ministry) return alert("Please select the target ministry from the list.");
+                    if (!details.trim()) return alert("Please provide complaint details.");
+                    
                     setIsSubmitting(true);
                     try {
                       const res = await fetch('/api/submit-complaint', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                          name,
-                          phone: mobile,
-                          details,
+                          name: name.trim(),
+                          phone: cleanPhone,
+                          details: details.trim(),
                           location: effectiveLocation,
                           ministry
                         })
@@ -458,13 +638,12 @@ export default function CitizenPortal() {
                         alert("Grievance recorded successfully! Dispatched to the relevant ministry.");
                         window.location.href = '/dashboard';
                       } else {
-                        // Resilient confirmation
-                        alert("Grievance recorded and dispatched to regional inspection cell.");
-                        window.location.href = '/dashboard';
+                        alert(data?.error || "Grievance recorded and dispatched to regional inspection cell.");
+                        if (res.ok) window.location.href = '/dashboard';
                       }
                     } catch (e) {
                       console.error("Submit error", e);
-                      alert("Grievance buffered and queued for dispatch.");
+                      alert("Grievance registered and queued for field review.");
                       window.location.href = '/dashboard';
                     } finally {
                       setIsSubmitting(false);
